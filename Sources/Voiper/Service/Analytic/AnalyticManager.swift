@@ -54,6 +54,12 @@ public class AnalyticManager {
             }
         }
     }
+
+    func setUserProperties(_ properties: [String: String]) {
+        if amplToken != nil {
+            Amplitude.instance().setUserProperties(properties)
+        }
+    }
     
     public func trackEvent(_ eventName: String, attributes: [String: Any] = [:]) {
         
