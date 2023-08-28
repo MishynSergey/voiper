@@ -3,7 +3,7 @@
 import Foundation
 
 public struct SendMessageResponse: Decodable {
-    let activity: Activity?
+    public let activity: Activity?
     let cancel_id:Int?
     let will_be_sent_at:Date?
 }

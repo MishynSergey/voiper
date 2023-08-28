@@ -135,7 +135,7 @@ extension TheProduct {
             }
         }
         
-        var id: String? {
+        public var id: String? {
             
             switch self {
             case .oneNumberWeekly:
@@ -216,7 +216,7 @@ extension TheProduct {
             }
         }
         
-        var group: Int {
+        public var group: Int {
             switch self {
             case .oneNumberWeekly, .oneNumberWeeklyTrial,
                  .oneNumberMonthly, .oneNumberMonthlyTrial,
