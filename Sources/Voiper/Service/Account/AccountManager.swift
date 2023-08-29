@@ -228,6 +228,7 @@ public class AccountManager: Observable1, OnNotification {
                     realm.add(subscription, update: .all)
                 }
             }
+            self.notifyObservers(.loaded)
         }
     }
     

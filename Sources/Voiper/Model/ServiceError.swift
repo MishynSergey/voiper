@@ -10,7 +10,6 @@ public enum ServiceError: Error {
     case undefined
     case other(Error)
     case restoreUnavailable
-    case phoneWithdraw
     case accountPaused
     case phoneRestoring(String)
     case innactiveNumber
