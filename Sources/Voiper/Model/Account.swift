@@ -3,13 +3,11 @@
 import Foundation
 import RealmSwift
 
-
 public class Account: Decodable {
     
     public static let updateNotification = Notification.Name("accountUpdateNotification")
     public var hasSubscription = false
     public var balance = 0
-    
     var locale = "en_US"
     
     public let id: Int
