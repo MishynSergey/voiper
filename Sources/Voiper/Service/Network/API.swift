@@ -186,7 +186,8 @@ extension API {
             var params: [String: Any] = [
                 "number": phone.number,
                 "country": phone.country,
-                "type": "Local"
+                "type": "Local",
+                "provider": phone.provider.rawValue
             ]
             if let region = phone.region {
                 params["region"] = region
@@ -203,7 +204,8 @@ extension API {
                 "number" : phone.number,
                 "country" : phone.country,
                 "type" : "Local",
-                "subscription_id" : subscriptionId
+                "subscription_id" : subscriptionId,
+                "provider": phone.provider.rawValue
             ]
             if let region = phone.region {
                 params["region"] = region

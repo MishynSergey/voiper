@@ -22,6 +22,7 @@ public struct RegionNumber: Decodable {
     public let renewPrice: Int
     public let source: Source?
     public let note: String?
+    let provider: NumberProvider
     
     public var isAddressRequired: Bool {
          return addressRequired > 0
@@ -44,9 +45,10 @@ public struct RegionNumber: Decodable {
         case renewPrice =       "renew_price_cr"
         case source
         case note
+        case provider
     }
     
-    public init(region: String?, formattedNumber: String, number: String, country: String, capabilities: [Capability], addressRequired: Int, renewPrice: Int, source: Source?, note: String) {
+    public init(region: String?, formattedNumber: String, number: String, country: String, capabilities: [Capability], addressRequired: Int, renewPrice: Int, source: Source?, note: String, provider: NumberProvider) {
         self.region = region
         self.formattedNumber = formattedNumber
         self.number = number
@@ -56,6 +58,7 @@ public struct RegionNumber: Decodable {
         self.renewPrice = renewPrice
         self.source = source
         self.note = note
+        self.provider = provider
     }
     
     public init(from decoder: Decoder) throws {
@@ -69,6 +72,7 @@ public struct RegionNumber: Decodable {
         self.renewPrice = try container.decodeIfPresent(Int.self, forKey: .renewPrice) ?? 0
         self.source = try container.decodeIfPresent(RegionNumber.Source.self, forKey: .source)
         self.note = try container.decode(String.self, forKey: .note)
+        self.provider = try container.decode(NumberProvider.self, forKey: .provider)
     }
 }
 

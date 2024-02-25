@@ -2,6 +2,28 @@
 import RealmSwift
 import UIKit
 
+public enum NumberProvider: String, Decodable {
+    case twilio
+    case telnyx
+    case unknown
+    
+    public init(rawValue: String?) {
+        switch rawValue?.lowercased() {
+        case "twilio":
+            self = .twilio
+        case "telnyx":
+            self = .telnyx
+        default:
+            self = .unknown
+        }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self = NumberProvider(rawValue: try? container.decode(String.self))
+    }
+}
+
 public struct PhoneNumber: Decodable {
     
     public enum PhonenumberStatus:String,Decodable {
@@ -21,11 +43,6 @@ public struct PhoneNumber: Decodable {
         }
     }
     
-    enum Provider: String, Decodable {
-        case twilio
-        case telnyx
-    }
-    
     public let id: Int
     public let region: String
     public let formattedNumber: String
@@ -42,7 +59,7 @@ public struct PhoneNumber: Decodable {
     public let status: PhonenumberStatus?
     public let subscription: SubscriptionInfo?
     public let subscriptionID: String?
-    let provider: Provider
+    let provider: NumberProvider
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -106,7 +123,7 @@ extension PhoneNumber {
                   billedUntil: realmObject.billedUntil,
                   autorenew: realmObject.autorenew,
                   status: PhoneNumber.PhonenumberStatus(rawValue: realmObject.status) ?? .expired  , subscription: nil, subscriptionID: realmObject.subscriptionID,
-                  provider: Provider(rawValue: realmObject.numberProvider) ?? .twilio)
+                  provider: NumberProvider(rawValue: realmObject.numberProvider))
     }
 }
 
