@@ -3,9 +3,13 @@
 import Foundation
 
 public enum Capability: String, Decodable {
-    case sms, voice, mms, fax
+    case sms
+    case voice
+    case mms
+    case fax
+    case unknown
     
-    public var label: String? {
+    var label: String? {
         switch self {
         case .voice:
             return .voice
@@ -17,18 +21,9 @@ public enum Capability: String, Decodable {
             return nil
         }
     }
-}
-
-extension Capability: CustomStringConvertible {
-    public var description: String {
-        return self.rawValue
-    }
-}
-
-
-extension Capability {
-    public init?(rawValue: String) {
-        switch rawValue {
+    
+    public init(rawValue: String) {
+        switch rawValue.lowercased() {
         case "sms":
             self = .sms
         case "voice":
@@ -38,8 +33,19 @@ extension Capability {
         case "fax":
             self = .fax
         default:
-            return nil
+            self = .unknown
         }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self = Capability(rawValue: try container.decode(String.self))
+    }
+}
+
+extension Capability: CustomStringConvertible {
+    public var description: String {
+        return self.rawValue
     }
 }
 

@@ -34,11 +34,6 @@ public struct RegionNumber: Decodable {
         case foreign
     }
     
-    public enum Source: String, Decodable {
-        case pool
-        case twilio
-    }
-    
     public enum CodingKeys: String, CodingKey {
         case region
         case formattedNumber =  "number_friendly"
@@ -49,6 +44,58 @@ public struct RegionNumber: Decodable {
         case renewPrice =       "renew_price_cr"
         case source
         case note
+    }
+    
+    public init(region: String?, formattedNumber: String, number: String, country: String, capabilities: [Capability], addressRequired: Int, renewPrice: Int, source: Source?, note: String) {
+        self.region = region
+        self.formattedNumber = formattedNumber
+        self.number = number
+        self.country = country
+        self.capabilities = capabilities
+        self.addressRequired = addressRequired
+        self.renewPrice = renewPrice
+        self.source = source
+        self.note = note
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.region = try container.decodeIfPresent(String.self, forKey: .region)
+        self.formattedNumber = try container.decode(String.self, forKey: .formattedNumber)
+        self.number = try container.decode(String.self, forKey: .number)
+        self.country = try container.decode(String.self, forKey: .country)
+        self.capabilities = try container.decode([Capability].self, forKey: .capabilities)
+        self.addressRequired = try container.decode(Int.self, forKey: .addressRequired)
+        self.renewPrice = try container.decodeIfPresent(Int.self, forKey: .renewPrice) ?? 0
+        self.source = try container.decodeIfPresent(RegionNumber.Source.self, forKey: .source)
+        self.note = try container.decode(String.self, forKey: .note)
+    }
+}
+
+extension RegionNumber {
+    public enum Source: String, Decodable {
+        case pool
+        case twilio
+        case telnyx
+        case unknown
+        
+        public init(rawValue: String?) {
+            switch rawValue?.lowercased() {
+            case "pool":
+                self = .pool
+            case "twilio":
+                self = .twilio
+            case "telnyx":
+                self = .telnyx
+            default:
+                self = .unknown
+            }
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            self = Source(rawValue: try? container.decode(String.self))
+        }
     }
 }
 

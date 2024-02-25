@@ -12,7 +12,7 @@ public class VoipNotification: NSObject, Observable1 {
         didSet {
             if let handler = notificationHandler,
                 let pendingData = pendingNotification {
-                handler.handleVoipNotification(pendingData)
+                handler.handleTwilioVoipNotification(pendingData)
             }
         }
     }
@@ -80,7 +80,11 @@ extension VoipNotification: PKPushRegistryDelegate {
         print("VOIP PUSH RECIEVED")
                 
         guard type == .voIP else { return }
-
+        
+        handleVOIPPush(payload: payload, completion: completion)
+    }
+    
+    private func handleVOIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
         if CallMagic.provider == nil {
             CallMagic.provider = CallProvider()
         }
@@ -88,24 +92,24 @@ extension VoipNotification: PKPushRegistryDelegate {
         if CallMagic.UID != nil {
             CallMagic.UID = UUID()
         }
-        
-        if payload.dictionaryPayload["twi_message_type"] as? String == "twilio.voice.call" {
-        
+
+        if payload.dictionaryPayload["twi_message_type"] != nil {
+            handleTwilioVOIPPush(payload: payload, completion: completion)
+        }
+    }
+
+    private func handleTwilioVOIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
+        guard let twiMessageType = payload.dictionaryPayload["twi_message_type"] as? String else { return }
+        switch twiMessageType {
+        case "twilio.voice.call":
             if let handler = notificationHandler {
-                handler.handleVoipNotification(payload.dictionaryPayload)
+                handler.handleTwilioVoipNotification(payload.dictionaryPayload)
             } else {
                 pendingNotification = payload.dictionaryPayload
             }
             
             let twi_from = (payload.dictionaryPayload["twi_from"] as? String) ?? "Connecting.."
-           
-            let set = CharacterSet(charactersIn: "+1234567890")
-            let cleanHandle = twi_from.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-            .trimmingCharacters(in: set.inverted)
-            
+
             CallMagic.update = CXCallUpdate()
             CallMagic.update?.remoteHandle = CXHandle(type: .generic, value: twi_from)
             CallMagic.update?.supportsDTMF = true
@@ -115,22 +119,18 @@ extension VoipNotification: PKPushRegistryDelegate {
             CallMagic.update?.hasVideo = false
             CallMagic.update?.localizedCallerName = twi_from
                
-            if let uid = CallMagic.UID , let provider = CallMagic.provider, let update = CallMagic.update {
+            if let uid = CallMagic.UID, let provider = CallMagic.provider, let update = CallMagic.update {
                 CallMagic.update = nil
                 provider.reportIncomingCall(from: uid , with: update) { _ in
                     print("Incoming first reportIncomingCall ok")
                     completion()
                 }
             }
-            
-        } else if payload.dictionaryPayload["twi_message_type"] as? String == "twilio.voice.cancel"
-                    ||
-                    payload.dictionaryPayload["twi_message_type"] as? String == "twilio.voice.end" {
-            
+        case "twilio.voice.cancel", "twilio.voice.end":
             if let uid = CallMagic.UID , let provider = CallMagic.provider {
                 
                 if let handler = notificationHandler {
-                    handler.handleVoipNotification(payload.dictionaryPayload)
+                    handler.handleTwilioVoipNotification(payload.dictionaryPayload)
                 } else {
                     pendingNotification = payload.dictionaryPayload
                 }
@@ -138,6 +138,8 @@ extension VoipNotification: PKPushRegistryDelegate {
                 print("Incoming close ok")
                 provider.close(from: uid)
             }
+        default:
+            return
         }
     }
 }

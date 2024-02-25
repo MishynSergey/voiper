@@ -21,6 +21,11 @@ public struct PhoneNumber: Decodable {
         }
     }
     
+    enum Provider: String, Decodable {
+        case twilio
+        case telnyx
+    }
+    
     public let id: Int
     public let region: String
     public let formattedNumber: String
@@ -35,8 +40,9 @@ public struct PhoneNumber: Decodable {
     public let billedUntil: Date
     public let autorenew: Bool
     public let status: PhonenumberStatus?
-    public let subscription:SubscriptionInfo?
-    public let subscriptionID:String?
+    public let subscription: SubscriptionInfo?
+    public let subscriptionID: String?
+    let provider: Provider
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -55,6 +61,7 @@ public struct PhoneNumber: Decodable {
         case status
         case subscription
         case subscriptionID
+        case provider
     }
     
     public var isActive: Bool {
@@ -98,7 +105,8 @@ extension PhoneNumber {
                   renewPrice: realmObject.renewPrice,
                   billedUntil: realmObject.billedUntil,
                   autorenew: realmObject.autorenew,
-                  status: PhoneNumber.PhonenumberStatus(rawValue: realmObject.status) ?? .expired  , subscription: nil, subscriptionID: realmObject.subscriptionID)
+                  status: PhoneNumber.PhonenumberStatus(rawValue: realmObject.status) ?? .expired  , subscription: nil, subscriptionID: realmObject.subscriptionID,
+                  provider: Provider(rawValue: realmObject.numberProvider) ?? .twilio)
     }
 }
 
@@ -118,7 +126,8 @@ public class PhoneNumberRealm: Object {
     @objc dynamic var billedUntil: Date = Date()
     @objc dynamic var autorenew: Bool = true
     @objc dynamic var status: String = ""
-    @objc dynamic var subscriptionID:String? = nil
+    @objc dynamic var subscriptionID: String? = nil
+    @objc dynamic var numberProvider: String = ""
     
     static func create(with phoneNumber: PhoneNumber) -> PhoneNumberRealm {
         let realmObject = PhoneNumberRealm()
@@ -145,6 +154,7 @@ public class PhoneNumberRealm: Object {
         realmObject.autorenew = phoneNumber.autorenew
         realmObject.status = phoneNumber.status?.rawValue ?? ""
         realmObject.subscriptionID = phoneNumber.subscription?.productId
+        realmObject.numberProvider = phoneNumber.provider.rawValue
 
         return realmObject
     }

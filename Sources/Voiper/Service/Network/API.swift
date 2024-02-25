@@ -291,10 +291,12 @@ extension API {
             ]
         case .getTransactions(_, let last_id):
             if let last_id = last_id {
-                return ["last_id":last_id, "per_page":10]
+                return ["last_id":last_id, "per_page": 10]
             } else {
-                return ["per_page":10]
+                return ["per_page": 10]
             }
+        case .getCountryPhones:
+            return ["provider": "telnyx"]
         default:
             return [:]
         }
