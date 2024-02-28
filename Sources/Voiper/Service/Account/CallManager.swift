@@ -1,23 +1,34 @@
 import Foundation
+import FirebaseCrashlytics
 import PromiseKit
 import AVFoundation
 import TwilioVoice
+import TelnyxRTC
 
 public class CallManager: NSObject {
     
+    private static var serverConfig: TxServerConfiguration = {
+        #if DEBUG
+        return TxServerConfiguration(environment: .development)
+        #else
+        return TxServerConfiguration(environment: .production)
+        #endif
+    }()
+    
     private var observerToken = 0
-    weak var voipNotification: VoipNotification! {
+    weak var voipNotification: VoipNotification? {
         didSet {
-            if let oldModel = oldValue {
-                oldModel.removeObserver(self.observerToken)
+            if let oldValue {
+                oldValue.removeObserver(observerToken)
             }
             if let model = voipNotification {
-                self.observerToken = model.observe { event in
+                observerToken = model.observe { [weak self] event in
+                    guard let self else { return }
                     switch event {
                     case .register(let token):
-                        self.registerForPush(with: token)
+                        registerForPush(with: token)
                     case .unregister(let token):
-                        self.unregisterForPush(with: token)
+                        unregisterForPush(with: token)
                     }
                 }
             }
@@ -26,6 +37,7 @@ public class CallManager: NSObject {
     
     unowned var phoneModel: PhoneModel
     let phoneNumber: PhoneNumber
+    private var telnyxClient: TxClient?
     private let service: Service
     private let accountManager: AccountManager?
     
@@ -34,6 +46,8 @@ public class CallManager: NSObject {
         self.phoneModel = phoneModel
         self.phoneNumber = phoneModel.phoneNumber
         self.accountManager = accountManager
+        
+        self.telnyxClient = phoneModel.phoneNumber.provider == .telnyx ? TxClient() : nil
         
         super.init()
     }
@@ -54,27 +68,68 @@ public class CallManager: NSObject {
     }
     
     private func registerForPush(with deviceToken: Data) {
+        guard phoneNumber.isActive else { return }
         _ = fetchAccessToken()
-            .then { token -> Promise<Void> in
-                return Promise { seal in
-                    TwilioVoiceSDK.register(accessToken: token, deviceToken: deviceToken, completion: { error in
-                        if let error = error {
-                            seal.reject(error)
-                        } else {
-                            print("Registred for ring with \(token) for device \(deviceToken)")
-                            seal.fulfill(())
-                        }
-                    })
+            .then { [weak self] token -> Promise<Void> in
+                guard let self else { return Promise() }
+                switch phoneNumber.provider {
+                case .twilio:
+                    return registerForPushFromTwilio(with: deviceToken, and: token)
+                case .telnyx:
+                    return registerForPushFromTelnyx(with: deviceToken, and: token)
+                case .unknown:
+                    return Promise()
                 }
             }
     }
     
+    private func registerForPushFromTwilio(with deviceToken: Data, and accessToken: String) -> Promise<Void> {
+        return Promise { seal in
+            TwilioVoiceSDK.register(accessToken: accessToken, deviceToken: deviceToken, completion: { error in
+                if let error = error {
+                    seal.reject(error)
+                } else {
+                    print("Registred for ring with \(accessToken) for device \(deviceToken)")
+                    seal.fulfill(())
+                }
+            })
+        }
+    }
+
+    private func registerForPushFromTelnyx(with deviceToken: Data, and accessToken: String) -> Promise<Void> {
+        return Promise { seal in
+            do {
+                try telnyxClient?
+                    .connect(
+                        txConfig: TxConfig(
+                            token: accessToken,
+                            pushDeviceToken: deviceToken.reduce("", {$0 + String(format: "%02X", $1) })
+                        ),
+                        serverConfiguration: CallManager.serverConfig
+                    )
+                seal.fulfill(())
+            } catch {
+                Crashlytics.crashlytics().record(error: error)
+                seal.reject(error)
+            }
+        }
+    }
+    
     private func unregisterForPush(with deviceToken: Data) {
+        switch phoneNumber.provider {
+        case .twilio:
+            unregisterForPushFromTwilio(with: deviceToken)
+        case .telnyx:
+            unregisterForPushFromTelnyx()
+        case .unknown:
+            return
+        }
+    }
+    
+    private func unregisterForPushFromTwilio(with deviceToken: Data) {
         _ = fetchAccessToken()
             .then { token -> Promise<Void> in
                 return Promise { seal in
-                    
-                    
                     TwilioVoiceSDK.unregister(accessToken: token, deviceToken: deviceToken, completion: { error in
                         if let error = error {
                             seal.reject(error)
@@ -84,6 +139,11 @@ public class CallManager: NSObject {
                     })
                 }
             }
+    }
+    
+    private func unregisterForPushFromTelnyx() {
+        guard let telnyxClient else { return }
+        telnyxClient.disablePushNotifications()
     }
     
     

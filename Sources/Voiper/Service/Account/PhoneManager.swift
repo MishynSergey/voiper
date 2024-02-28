@@ -3,6 +3,7 @@
 import Foundation
 import RealmSwift
 import PromiseKit
+import FirebaseCrashlytics
 
 public class PhoneManager: Observable1 {
     public enum Event {
@@ -26,14 +27,14 @@ public class PhoneManager: Observable1 {
     }
     
     private func addObserver() {
-        if self.token == nil {
-            self.token = self.realmPhones.observe { changes in
+        if token == nil {
+            token = realmPhones.observe { [weak self] changes in
+                guard let self else { return }
                 switch changes {
-                case .initial,
-                     .update:
-                    let numbers: [PhoneNumber] = self.realmPhones.map { PhoneNumber(realmObject: $0) }
-                    self.update(with: numbers)
-                case .error:
+                case .initial, .update:
+                    update(with: realmPhones.map { PhoneNumber(realmObject: $0) })
+                case .error(let error):
+                    Crashlytics.crashlytics().record(error: error)
                     break
                 }
             }
@@ -51,7 +52,9 @@ public class PhoneManager: Observable1 {
                 oldModel.phoneNumber = phoneNumber
                 models.append(oldModel)
             } else {
-                models.append(PhoneModel(phoneNumber: phoneNumber, service: self.service))
+                let model = PhoneModel(phoneNumber: phoneNumber, service: self.service)
+                model.callManager.voipNotification = AccountManager.shared.voipNotification
+                models.append(model)
             }
         }
 

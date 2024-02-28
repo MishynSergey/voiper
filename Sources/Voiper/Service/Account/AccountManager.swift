@@ -253,22 +253,12 @@ public class AccountManager: Observable1, OnNotification {
     }
     
     func updateCallFlow() {
-        if let activePhone = self.phoneManager.activePhoneModel
-//            ,
-//            (Settings.isRestoringPeriod || activePhone.phoneNumber.isActive)
-        {
+        if let activePhone = phoneManager.activePhoneModel/*, (Settings.isRestoringPeriod || activePhone.phoneNumber.isActive)*/ {
                 AccountManager.callFlow.callManager = activePhone.callManager
-                activePhone.callManager.voipNotification = self.voipNotification
-                self.voipNotification.notificationHandler = AccountManager.callFlow
-        } else {
-            
-            if let active = self.phoneManager.phoneModels.first(where: { phoneModel in
-                return phoneModel.phoneNumber.status == .active
-            }) {
+                voipNotification.notificationHandler = AccountManager.callFlow
+        } else if let active = phoneManager.phoneModels.first(where: { $0.phoneNumber.status == .active}) {
                 AccountManager.callFlow.callManager = active.callManager
-                active.callManager.voipNotification = self.voipNotification
-                self.voipNotification.notificationHandler = AccountManager.callFlow
-            }
+                voipNotification.notificationHandler = AccountManager.callFlow
         }
     }
 

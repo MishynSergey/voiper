@@ -2,10 +2,38 @@ import Foundation
 import PushKit
 import CallKit
 import TwilioVoice
+import KeychainAccess
 
 public class VoipNotification: NSObject, Observable1 {
+    private struct Key {
+        fileprivate static var bundle: String {
+            if let path = Bundle.main.path(forResource: "Info", ofType: "plist"),
+               let dict = NSDictionary(contentsOfFile: path),
+               let bundle = dict["CFBundleIdentifier"] as? String {
+                return bundle
+            } else {
+                fatalError("add callBaseURL -> Info.plist")
+            }
+        }
+        
+        public static let keychainName = "\(bundle).keychain.key"
+        public static let deviceToken = "\(bundle).keychain.device.token.key"
+    }
     
-    private var deviceToken: Data?
+    private var deviceToken: Data? {
+        get {
+            try? Keychain(service: Key.keychainName).getData(Key.deviceToken)
+        }
+        set {
+            let keychain = Keychain(service: Key.keychainName)
+            if let newValue = newValue {
+                try! keychain.synchronizable(true).set(newValue, key: Key.deviceToken)
+            } else {
+                try! keychain.synchronizable(true).remove(Key.deviceToken)
+            }
+        }
+    }
+
     private var voipRegistry: PKPushRegistry
     
     weak var notificationHandler: VoipNotificationHandler? {
@@ -39,7 +67,12 @@ public class VoipNotification: NSObject, Observable1 {
     
     public var observerTokenGenerator = 0
     public var observers: [Int: (Event) -> Void] = [:]
-    public var initialEvent: Event?
+    public var initialEvent: Event? {
+        didSet {
+            guard let initialEvent else { return }
+            notifyObservers(initialEvent)
+        }
+    }
 }
 
 extension VoipNotification: PKPushRegistryDelegate {
@@ -48,15 +81,8 @@ extension VoipNotification: PKPushRegistryDelegate {
         guard type == .voIP else {
             return
         }
-        print("VOIP TOKEN ADDED: \((pushCredentials.token as NSData).description)")
         deviceToken = pushCredentials.token
         initialEvent = Event.register(pushCredentials.token)
-        if let initialEvent = initialEvent {
-            notifyObservers(initialEvent)
-        } else {
-            print("initialEvent is nil")
-        }
-       
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -64,10 +90,8 @@ extension VoipNotification: PKPushRegistryDelegate {
             let deviceToken = deviceToken else {
                 return
         }
-        
-        print("VOIP TOKEN REMOVED: \(deviceToken)")
+        self.deviceToken = nil
         initialEvent = Event.unregister(deviceToken)
-        notifyObservers(initialEvent!)
     }
     
    
@@ -81,10 +105,10 @@ extension VoipNotification: PKPushRegistryDelegate {
                 
         guard type == .voIP else { return }
         
-        handleVOIPPush(payload: payload, completion: completion)
+        handleVoIPPush(payload: payload, completion: completion)
     }
     
-    private func handleVOIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
+    private func handleVoIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
         if CallMagic.provider == nil {
             CallMagic.provider = CallProvider()
         }
@@ -94,11 +118,14 @@ extension VoipNotification: PKPushRegistryDelegate {
         }
 
         if payload.dictionaryPayload["twi_message_type"] != nil {
-            handleTwilioVOIPPush(payload: payload, completion: completion)
+            handleTwilioVoIPPush(payload: payload, completion: completion)
+        } else if let metadata = payload.dictionaryPayload["metadata"] as? [String: Any] {
+            handleTelnyxVoIPPush(payload: payload)
+            completion()
         }
     }
 
-    private func handleTwilioVOIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
+    private func handleTwilioVoIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
         guard let twiMessageType = payload.dictionaryPayload["twi_message_type"] as? String else { return }
         switch twiMessageType {
         case "twilio.voice.call":
@@ -140,6 +167,30 @@ extension VoipNotification: PKPushRegistryDelegate {
             }
         default:
             return
+        }
+    }
+    
+    private func handleTelnyxVoIPPush(payload: PKPushPayload) {
+        if let metadata = payload.dictionaryPayload["metadata"] as? [String: Any] {
+            var callID = UUID.init().uuidString
+            if let newCallId = (metadata["call_id"] as? String),
+               !newCallId.isEmpty {
+                callID = newCallId
+            }
+            let callerName = (metadata["caller_name"] as? String) ?? ""
+            let callerNumber = (metadata["caller_number"] as? String) ?? ""
+            
+          
+            
+            let caller = callerName.isEmpty ? (callerNumber.isEmpty ? "Unknown" : callerNumber) : callerName
+            let uuid = UUID(uuidString: callID)
+//            self.processVoIPNotification(callUUID: uuid!,pushMetaData: metadata)
+//            self.newIncomingCall(from: caller, uuid: uuid!)
+        } else {
+            // If there's no available metadata, let's create the notification with dummy data.
+            let uuid = UUID.init()
+//            self.processVoIPNotification(callUUID: uuid,pushMetaData: [String: Any]())
+//            self.newIncomingCall(from: "Incoming call", uuid: uuid)
         }
     }
 }
