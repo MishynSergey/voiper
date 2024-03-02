@@ -32,18 +32,18 @@ public class CallModel {
         }
     }
     private let callKitCallController = CXCallController()
-    private var callKitCompletionCallback: ((Bool)-> ())? = nil
+//    private var callKitCompletionCallback: ((Bool)-> ())? = nil
     public var contact: Contact?
     
     private func observeCall() {
-        call.callConnectBlock = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.callKitCompletionCallback?(true)
-            strongSelf.callKitCompletionCallback = nil
-            strongSelf.callVC?.updateUI()
-        }
+//        call.callConnectBlock = { [weak self] in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            strongSelf.callKitCompletionCallback?(true)
+//            strongSelf.callKitCompletionCallback = nil
+//            strongSelf.callVC?.updateUI()
+//        }
         call.callDisconnectBlock = { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -51,7 +51,18 @@ public class CallModel {
             strongSelf.requestEnd(strongSelf.call)
         }
         
-        call.onUpdateState = { [callVC] in callVC?.updateUI() }
+        call.onUpdateState = { [weak self] state in
+            guard let self else { return }
+            callVC?.updateUI()
+
+            guard call.isOutgoing else { return }
+            switch (state, callManager.phoneNumber.provider) {
+            case (.connecting, .twilio), (.connected, .telnyx):
+                callProvider.reportOutgoingCall(with: call.uuid, connectedAt: Date())
+            default:
+                break
+            }
+        }
     }
     
     func handleCall(completion: (()->())? = nil) {
@@ -208,8 +219,8 @@ extension CallModel: CallProviderDelegate {
         } else {
             call.disconnect()
         }
-        callKitCompletionCallback?(false)
-        callKitCompletionCallback = nil
+//        callKitCompletionCallback?(false)
+//        callKitCompletionCallback = nil
         callVC?.updateUI()
         callVC?.durationTimer?.invalidate()
         call.endDate = Date()
@@ -219,15 +230,15 @@ extension CallModel: CallProviderDelegate {
     }
     
     func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool {
-        // TODO: Add Hold
-        return false
+        call.setOnHold(onHold)
+        return true
     }
     
     func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool {
         guard call.uuid == uuid else {
             return false
         }
-        call.isMuted = onMute
+        call.setMuted(onMute)
         callVC?.updateUI()
         return true
     }
@@ -258,7 +269,7 @@ extension CallModel {
                 guard let self = self else { return }
                 call.connect(with: token)
                 self.callVC?.updateUI()
-                self.callKitCompletionCallback = completion
+//                self.callKitCompletionCallback = completion
             }
             .catch { error in
                 completion(false)
@@ -267,7 +278,7 @@ extension CallModel {
 
     private func answer(_ call: SPCall, with completion: @escaping (Bool) -> Swift.Void) {
         if call.answer() {
-            callKitCompletionCallback = completion
+//            callKitCompletionCallback = completion
         } else {
             completion(false)
         }

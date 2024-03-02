@@ -7,7 +7,7 @@ import TelnyxRTC
 
 public class CallManager: NSObject {
     
-    private static var serverConfig: TxServerConfiguration = {
+    static var txServerConfig: TxServerConfiguration = {
         #if DEBUG
         return TxServerConfiguration(environment: .development)
         #else
@@ -99,7 +99,6 @@ public class CallManager: NSObject {
     private func registerForPushFromTelnyx(with deviceToken: Data, and accessToken: String) -> Promise<Void> {
         return Promise { [weak self] seal in
             guard let self else { seal.reject(ServiceError.undefined); return }
-            telnyxClient?.delegate = self
             do {
                 try telnyxClient?
                     .connect(
@@ -107,7 +106,7 @@ public class CallManager: NSObject {
                             token: accessToken,
                             pushDeviceToken: deviceToken.reduce("", {$0 + String(format: "%02X", $1) })
                         ),
-                        serverConfiguration: CallManager.serverConfig
+                        serverConfiguration: CallManager.txServerConfig
                     )
                 seal.fulfill(())
             } catch {
@@ -152,18 +151,20 @@ public class CallManager: NSObject {
     public func call(for number: String, completion: @escaping (Swift.Result<Void, Error>) -> Void) {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
-            self.accountManager?.updateCallFlow()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            accountManager?.updateCallFlow()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                guard let self else { return }
                 AccountManager
                     .callFlow
-                    .start(SPCall(uuid: UUID(), handle: number, isOutgoing: true))
-                    .done { _ in }
+                    .start(SPCall(uuid: UUID(), handle: number, isOutgoing: true, telnyxClient: self.telnyxClient, callerNumber: phoneNumber.formattedNumber))
+                    .done { _ in completion(.success(())) }
                     .catch { error in completion(.failure(error)) }
             }
         case .denied, .restricted:
             completion(.failure(ServiceError.noAccessToMicrophone))
         case .notDetermined:
-            requestAccessToMicrophone() { [unowned self, completion, number] granted in
+            requestAccessToMicrophone() { [weak self, completion, number] granted in
+                guard let self else { return }
                 if granted {
                     call(for: number, completion: completion)
                 } else {
@@ -179,48 +180,4 @@ public class CallManager: NSObject {
     private func requestAccessToMicrophone(_ completion: @escaping (Bool) -> Void) {
         AVCaptureDevice.requestAccess(for: .audio) { [completion] (granted) in completion(granted) }
     }
-}
-
-extension CallManager: TxClientDelegate {
-    public func onSocketConnected() {
-        
-    }
-    
-    public func onSocketDisconnected() {
-        
-    }
-    
-    public func onClientError(error: Error) {
-        print(error)
-    }
-    
-    public func onClientReady() {
-        
-    }
-    
-    public func onPushDisabled(success: Bool, message: String) {
-        
-    }
-    
-    public func onSessionUpdated(sessionId: String) {
-        
-    }
-    
-    public func onCallStateUpdated(callState: TelnyxRTC.CallState, callId: UUID) {
-        
-    }
-    
-    public func onIncomingCall(call: TelnyxRTC.Call) {
-        
-    }
-    
-    public func onRemoteCallEnded(callId: UUID) {
-        
-    }
-    
-    public func onPushCall(call: TelnyxRTC.Call) {
-        
-    }
-    
-    
 }

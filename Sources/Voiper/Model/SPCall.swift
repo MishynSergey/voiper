@@ -1,11 +1,14 @@
 import Foundation
+import FirebaseCrashlytics
 import TwilioVoice
 import PromiseKit
 import CallKit
 import TelnyxRTC
 
-public class SPCall: NSObject {
+public final class SPCall: NSObject {
     private var webSocket : URLSessionWebSocketTask?
+    private weak var telnyxClient: TxClient?
+    private var callerNumber: String?
 
     public let uuid: UUID
     public let isOutgoing: Bool
@@ -13,7 +16,7 @@ public class SPCall: NSObject {
     
     private var _state: State = .none {
         didSet {
-            onUpdateState?()
+            onUpdateState?(_state)
         }
     }
     public var state: State {
@@ -29,32 +32,16 @@ public class SPCall: NSObject {
     
     public var twilioCallInvite: TwilioVoice.CallInvite?
     public var twilioCall: TwilioVoice.Call?
+    private var txCall: TelnyxRTC.Call?
     
     public var connectingDate: Date?
     public var connectDate: Date?
     public var endDate: Date?
     
-    var isOnHold: Bool {
-        set {
-            twilioCall?.isOnHold = newValue
-        }
-        get {
-            return twilioCall?.isOnHold ?? false
-        }
-    }
-    public var isMuted: Bool {
-        set {
-            twilioCall?.isMuted = newValue
-        }
-        get {
-            return twilioCall?.isMuted ?? false
-        }
-    }
-    
     var userID: Int = 0
-    var callConnectBlock: (() -> ())?
+//    var callConnectBlock: (() -> ())?
     var callDisconnectBlock: ((Error?) -> ())?
-    var onUpdateState: (() -> Void)?
+    var onUpdateState: ((State) -> Void)?
     
     public var duration: TimeInterval {
         guard let connectDate = connectDate else {
@@ -74,10 +61,18 @@ public class SPCall: NSObject {
         }
     }
     
-    public init(uuid: UUID, handle: String, isOutgoing: Bool = false) {
+    public init(
+        uuid: UUID,
+        handle: String,
+        isOutgoing: Bool = false,
+        telnyxClient: TxClient? = nil,
+        callerNumber: String? = nil)
+    {
         self.uuid = uuid
         self.isOutgoing = isOutgoing
         self.handle = handle
+        self.telnyxClient = telnyxClient
+        self.callerNumber = callerNumber
     }
     
     deinit {
@@ -87,13 +82,62 @@ public class SPCall: NSObject {
     func connect(with token: String) {
         state = .start
         connectingDate = Date()
-       
+        
+        if let telnyxClient {
+            telnyxConnect(with: token)
+        } else {
+            twilioConnect(with: token)
+        }
+    }
+    
+    func setMuted(_ isMuted: Bool) {
+        twilioCall?.isMuted = isMuted
+        isMuted ? txCall?.muteAudio() : txCall?.unmuteAudio()
+    }
+    
+    func setOnHold(_ isOnHold: Bool) {
+        twilioCall?.isOnHold = isOnHold
+        isOnHold ? txCall?.hold() : txCall?.unhold()
+    }
+    
+    private func twilioConnect(with token: String) {
         let option = ConnectOptions(accessToken: token) { [handle] builder in
             builder.params = ["To": handle]
         }
-       
+        
         twilioCall = TwilioVoiceSDK.connect(options: option, delegate: self)
         createSocket()
+    }
+    
+    private func telnyxConnect(with token: String) {
+        guard let telnyxClient, let callerNumber else { return }
+        if !telnyxClient.isConnected() {
+            do {
+                try telnyxClient
+                    .connect(
+                        txConfig: TxConfig(
+                            token: token
+                        ),
+                        serverConfiguration: CallManager.txServerConfig
+                    )
+                telnyxConnect(with: token)
+            } catch {
+                Crashlytics.crashlytics().record(error: error)
+            }
+        } else {
+            telnyxClient.delegate = self
+            do {
+                txCall = try telnyxClient.newCall(
+                    callerName: callerNumber,
+                    callerNumber: callerNumber,
+                    destinationNumber: handle,
+                    callId: uuid
+                )
+            } catch {
+                Crashlytics.crashlytics().record(error: error)
+            }
+        }
+        
     }
     
     func answer() -> Bool {
@@ -172,8 +216,54 @@ extension SPCall: CallDelegate {
     public func callDidConnect(call twilioCall: TwilioVoice.Call) {
         print("callDidConnect:")
         state = .connecting
-        callConnectBlock?()
+//        callConnectBlock?()
     }
+}
+
+extension SPCall: TxClientDelegate {
+    public func onSocketConnected() { }
+    
+    public func onSocketDisconnected() { }
+    
+    public func onClientError(error: Error) { 
+        Crashlytics.crashlytics().record(error: error)
+    }
+    
+    public func onClientReady() { }
+    
+    public func onPushDisabled(success: Bool, message: String) { }
+    
+    public func onSessionUpdated(sessionId: String) { }
+    
+    public func onCallStateUpdated(callState: TelnyxRTC.CallState, callId: UUID) {
+        switch callState {
+        case .NEW:
+            break
+        case .CONNECTING, .RINGING:
+            state = .connecting
+        case .ACTIVE:
+            state = .connected
+            connectDate = Date()
+        case .HELD:
+            break
+        case .DONE:
+            txCall = nil
+            state = .ended
+            endDate = Date()
+        }
+    }
+    
+    public func onIncomingCall(call: TelnyxRTC.Call) { }
+    
+    public func onRemoteCallEnded(callId: UUID) { 
+        guard uuid == callId else { return }
+        txCall = nil
+        state = .ended
+        endDate = Date()
+        CallMagic.provider?.close(from: uuid, reason: .remoteEnded)
+    }
+    
+    public func onPushCall(call: TelnyxRTC.Call) { }
 }
 
 extension SPCall: URLSessionWebSocketDelegate {

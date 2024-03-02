@@ -19,7 +19,7 @@ protocol CallProviderDelegate: AnyObject {
     func providerRepordAudioSessionDeactivation()
 }
 
-public class CallProvider: NSObject {
+public final class CallProvider: NSObject {
     private let provider: CXProvider
     weak var delegate: CallProviderDelegate?
     
@@ -50,19 +50,23 @@ public class CallProvider: NSObject {
         TwilioVoiceSDK.audioDevice = audioDevice
     }
     
-    public func updateCall(with uuid: UUID, _ callUpdate: CXCallUpdate) {
+    func updateCall(with uuid: UUID, _ callUpdate: CXCallUpdate) {
         provider.reportCall(with: uuid, updated: callUpdate)
     }
     
-    public func reportIncomingCall(from uuid: UUID, with update: CXCallUpdate, _ completion: @escaping (Error?) -> ()) {
+    func reportIncomingCall(from uuid: UUID, with update: CXCallUpdate, _ completion: @escaping (Error?) -> ()) {
         provider.reportNewIncomingCall(with: uuid, update: update, completion: completion)
     }
     
-    public func close(from uuid: UUID) {
-        provider.reportCall(with: uuid, endedAt: Date(), reason: .failed)
+    func reportOutgoingCall(with uuid: UUID, connectedAt dateConnected: Date?) {
+        provider.reportOutgoingCall(with: uuid, connectedAt: dateConnected)
     }
     
-    public func invilidate() {
+    func close(from uuid: UUID, reason: CXCallEndedReason = .failed) {
+        provider.reportCall(with: uuid, endedAt: Date(), reason: reason)
+    }
+    
+    func invilidate() {
         provider.invalidate()
     }
 }
@@ -94,7 +98,7 @@ extension CallProvider: CXProviderDelegate {
         provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
         delegate.providerReportStartCall(with: action.callUUID) { success in
             if success {
-                provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
+//                provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
                 action.fulfill()
             } else {
                 action.fail()

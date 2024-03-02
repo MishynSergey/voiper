@@ -54,9 +54,10 @@ public class CallFlow: NSObject, OnNotification {
     }
     
     public func start(_ call: SPCall) -> Promise<Void> {
-        return Promise { seal in
+        return Promise { [weak self] seal in
+            guard let self else { seal.fulfill(()); return }
           
-            guard callModel == nil, let callManager = callManager, callManager.phoneNumber.isActive else {
+            guard callModel == nil, let callManager, callManager.phoneNumber.isActive else {
                 seal.reject(ServiceError.innactiveNumber)
                 return
             }
@@ -66,11 +67,11 @@ public class CallFlow: NSObject, OnNotification {
                     return
             }
              
-            self.callModel = CallModel(call: call, callFlow: self, callProvider: self.provider, callManager: callManager)
+            self.callModel = CallModel(call: call, callFlow: self, callProvider: provider, callManager: callManager)
             
             self.provider.delegate = self.callModel
             
-            if self.callModel?.call.isOutgoing == true {
+            if call.isOutgoing == true {
                 self.showCall()
             }
             
