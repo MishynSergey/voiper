@@ -227,6 +227,7 @@ extension SPCall: TxClientDelegate {
     
     public func onClientError(error: Error) { 
         Crashlytics.crashlytics().record(error: error)
+        callDisconnectBlock?(error)
     }
     
     public func onClientReady() { }
@@ -250,6 +251,7 @@ extension SPCall: TxClientDelegate {
             txCall = nil
             state = .ended
             endDate = Date()
+            callDisconnectBlock?(nil)
         }
     }
     
