@@ -37,7 +37,7 @@ public class CallManager: NSObject {
     
     unowned var phoneModel: PhoneModel
     let phoneNumber: PhoneNumber
-    private var telnyxClient: TxClient?
+    private (set) var telnyxClient: TxClient?
     private let service: Service
     private let accountManager: AccountManager?
     
@@ -151,12 +151,13 @@ public class CallManager: NSObject {
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
             self.accountManager?.updateCallFlow()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: {
-                AccountManager.callFlow.start(SPCall(uuid: UUID(), handle: number, isOutgoing: true)).done { _ in
-                }.catch { error in
-                    completion(.failure(error))
-                }
-            })
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                AccountManager
+                    .callFlow
+                    .start(SPCall(uuid: UUID(), handle: number, isOutgoing: true))
+                    .done { _ in }
+                    .catch { error in completion(.failure(error)) }
+            }
         case .denied, .restricted:
             completion(.failure(ServiceError.noAccessToMicrophone))
         case .notDetermined:

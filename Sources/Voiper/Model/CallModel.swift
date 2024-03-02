@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseCrashlytics
 import TwilioVoice
 import PromiseKit
 import CallKit
@@ -78,34 +79,31 @@ extension CallModel {
         call.state = .start
         callVC?.updateUI()
         
-        let callHandle = CXHandle(type: .phoneNumber, value: call.handle)
-        
+        let callHandle = CXHandle(type: .phoneNumber, value: call.handle) // .phoneNumber -> .generic ???
         let startCallAction = CXStartCallAction(call: call.uuid, handle: callHandle)
+        let transaction = CXTransaction(action: startCallAction)
+
         ContactsManager.shared.contactBy(phone: call.handle, completion: { contact in
             startCallAction.contactIdentifier = contact?.fullName
         })
-        let transaction = CXTransaction(action: startCallAction)
         
-        callKitCallController.request(transaction)  { error in
-            
+        callKitCallController.request(transaction) { [weak self] error in
+            guard let self else { return }
+
             if let error = error {
-                self.call.state = .failed(error)
-                self.callVC?.updateUI()
-                print("StartCallAction transaction request failed: \(error.localizedDescription)")
-                print("call UUID \(call.uuid)")
+                call.state = .failed(error)
+                callVC?.updateUI()
+                Crashlytics.crashlytics().record(error: error)
                 return
             }
-            
-            print("StartCallAction transaction request successful")
-            print("call UUID \(call.uuid)")
-            
+
             let callUpdate = CXCallUpdate()
             ContactsManager.shared.contactBy(phone: call.handle, completion: { contact in
                 callUpdate.localizedCallerName = contact?.fullName
             })
             callUpdate.remoteHandle = callHandle
             callUpdate.supportsDTMF = true
-            callUpdate.supportsHolding = false
+            callUpdate.supportsHolding = false // true for telnyx
             callUpdate.supportsGrouping = false
             callUpdate.supportsUngrouping = false
             callUpdate.hasVideo = false
@@ -182,7 +180,7 @@ extension CallModel {
 // MARK: - CXProviderDelegate
 extension CallModel: CallProviderDelegate {
     
-     public func providerReportStartCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
+    func providerReportStartCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
         guard call.uuid == uuid else {
             completion(false)
             return
@@ -191,7 +189,7 @@ extension CallModel: CallProviderDelegate {
         createTwilioCall(for: call, with: completion)
     }
     
-    public func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
+    func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
         guard call.uuid == uuid else {
             completion(false)
             return
@@ -201,7 +199,7 @@ extension CallModel: CallProviderDelegate {
         NotificationCenter.default.post(name: Notification.Name(rawValue: "ShowCall"), object: nil)
     }
     
-    public func providerReportEndCall(with uuid: UUID) {
+    func providerReportEndCall(with uuid: UUID) {
         guard call.uuid == uuid else {
             return
         }
@@ -220,12 +218,12 @@ extension CallModel: CallProviderDelegate {
         }
     }
     
-    public func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool {
+    func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool {
         // TODO: Add Hold
         return false
     }
     
-    public func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool {
+    func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool {
         guard call.uuid == uuid else {
             return false
         }
@@ -234,13 +232,21 @@ extension CallModel: CallProviderDelegate {
         return true
     }
     
-    public func providerReportSendDTMF(with uuid: UUID, _ digits: String) -> Bool {
+    func providerReportSendDTMF(with uuid: UUID, _ digits: String) -> Bool {
         guard call.uuid == uuid else {
             return false
         }
         call.sendDigits(digits)
         callVC?.updateUI()
         return true
+    }
+    
+    func providerRepordAudioSessionActivation() {
+        callManager.telnyxClient?.isAudioDeviceEnabled = true
+    }
+    
+    func providerRepordAudioSessionDeactivation() {
+        callManager.telnyxClient?.isAudioDeviceEnabled = false
     }
 }
     

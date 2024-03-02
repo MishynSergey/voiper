@@ -2,7 +2,7 @@ import Foundation
 import TwilioVoice
 import PromiseKit
 import CallKit
-
+import TelnyxRTC
 
 public class SPCall: NSObject {
     private var webSocket : URLSessionWebSocketTask?
@@ -27,8 +27,8 @@ public class SPCall: NSObject {
         }
     }
     
-    public var twilioCallInvite: CallInvite?
-    public var twilioCall: Call?
+    public var twilioCallInvite: TwilioVoice.CallInvite?
+    public var twilioCall: TwilioVoice.Call?
     
     public var connectingDate: Date?
     public var connectDate: Date?
@@ -147,7 +147,7 @@ public class SPCall: NSObject {
 }
 
 extension SPCall: CallDelegate {
-    public func callDidDisconnect(call: Call, error: Error?) {
+    public func callDidDisconnect(call: TwilioVoice.Call, error: Error?) {
         if let error = error {
             state = .failed(error)
             print("Call failed: \(error.localizedDescription)")
@@ -162,14 +162,14 @@ extension SPCall: CallDelegate {
     }
     
     
-    public func callDidFailToConnect(call: Call, error: Error) {
+    public func callDidFailToConnect(call: TwilioVoice.Call, error: Error) {
         print("Call failed to connect: \(error.localizedDescription)")
         state = .failed(error)
         callDisconnectBlock?(error)
         closeSession()
     }
   
-    public func callDidConnect(call twilioCall: Call) {
+    public func callDidConnect(call twilioCall: TwilioVoice.Call) {
         print("callDidConnect:")
         state = .connecting
         callConnectBlock?()

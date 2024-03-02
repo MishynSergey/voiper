@@ -7,18 +7,21 @@ import CallKit
 import TwilioVoice
 import UIKit
 
-public protocol CallProviderDelegate: AnyObject {
+protocol CallProviderDelegate: AnyObject {
     func providerReportStartCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
     func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
     func providerReportEndCall(with uuid: UUID)
     func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool
     func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool
     func providerReportSendDTMF(with uuid: UUID, _ digits: String) -> Bool
+    
+    func providerRepordAudioSessionActivation()
+    func providerRepordAudioSessionDeactivation()
 }
 
 public class CallProvider: NSObject {
     private let provider: CXProvider
-    public weak var delegate: CallProviderDelegate?
+    weak var delegate: CallProviderDelegate?
     
     var audioDevice = DefaultAudioDevice()
 
