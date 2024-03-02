@@ -97,7 +97,9 @@ public class CallManager: NSObject {
     }
 
     private func registerForPushFromTelnyx(with deviceToken: Data, and accessToken: String) -> Promise<Void> {
-        return Promise { seal in
+        return Promise { [weak self] seal in
+            guard let self else { seal.reject(ServiceError.undefined); return }
+            telnyxClient?.delegate = self
             do {
                 try telnyxClient?
                     .connect(
@@ -179,4 +181,46 @@ public class CallManager: NSObject {
     }
 }
 
-
+extension CallManager: TxClientDelegate {
+    public func onSocketConnected() {
+        
+    }
+    
+    public func onSocketDisconnected() {
+        
+    }
+    
+    public func onClientError(error: Error) {
+        print(error)
+    }
+    
+    public func onClientReady() {
+        
+    }
+    
+    public func onPushDisabled(success: Bool, message: String) {
+        
+    }
+    
+    public func onSessionUpdated(sessionId: String) {
+        
+    }
+    
+    public func onCallStateUpdated(callState: TelnyxRTC.CallState, callId: UUID) {
+        
+    }
+    
+    public func onIncomingCall(call: TelnyxRTC.Call) {
+        
+    }
+    
+    public func onRemoteCallEnded(callId: UUID) {
+        
+    }
+    
+    public func onPushCall(call: TelnyxRTC.Call) {
+        
+    }
+    
+    
+}
