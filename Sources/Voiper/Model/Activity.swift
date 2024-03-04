@@ -103,14 +103,14 @@ public struct Activity: Decodable {
         case message, call
     }
     public enum Status: String, Decodable {
-        case accepted, queued, sending, sent, receiving, received, delivered, undelivered, failed, ringing, inProgress, noAnswer, canceled, completed, busy
+        case accepted, queued, sending, sent, receiving, received, delivered, undelivered, failed, ringing, inProgress, noAnswer, canceled, completed, busy, unknown
         
         public init(from decoder: Decoder) throws {
             let label = try decoder.singleValueContainer().decode(String.self)
             switch label {
             case "in-progress": self = .inProgress
             case "no-answer": self = .noAnswer
-            default: self = Status(rawValue: label)!
+            default: self = Status(rawValue: label) ?? .unknown
             }
         }
         
@@ -147,6 +147,8 @@ public struct Activity: Decodable {
                 return nil
             case .busy:
                 return "Busy"
+            case .unknown:
+                return nil
             }
         }
     }
