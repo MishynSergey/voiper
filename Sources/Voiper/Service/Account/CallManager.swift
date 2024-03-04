@@ -156,7 +156,7 @@ public class CallManager: NSObject {
                 guard let self else { return }
                 AccountManager
                     .callFlow
-                    .start(SPCall(uuid: UUID(), handle: number, isOutgoing: true, telnyxClient: self.telnyxClient, callerNumber: phoneNumber.formattedNumber))
+                    .start(SPCall(uuid: UUID(), handle: number, isOutgoing: true, telnyxClient: self.telnyxClient, callerNumber: phoneNumber.number))
                     .done { _ in completion(.success(())) }
                     .catch { error in completion(.failure(error)) }
             }
