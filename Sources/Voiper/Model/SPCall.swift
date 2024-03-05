@@ -160,7 +160,7 @@ public final class SPCall: NSObject {
         twilioCall?.sendDigits(digits)
     }
     
-    func disconnect() {
+    func disconnect(with action: CXEndCallAction) {
         //migrate
         if let invite = twilioCallInvite {
             invite.reject()
@@ -171,6 +171,8 @@ public final class SPCall: NSObject {
             twCall.disconnect()
             twilioCall = nil
             state = .ending
+        } else if let telnyxClient {
+            telnyxClient.endCallFromCallkit(endAction: action)
         }
     }
 
@@ -259,9 +261,9 @@ extension SPCall: TxClientDelegate {
     
     public func onRemoteCallEnded(callId: UUID) { 
         guard uuid == callId else { return }
-        txCall = nil
-        state = .ended
-        endDate = Date()
+//        txCall = nil
+//        state = .ended
+//        endDate = Date()
         CallMagic.provider?.close(from: uuid, reason: .remoteEnded)
     }
     

@@ -10,7 +10,7 @@ import UIKit
 protocol CallProviderDelegate: AnyObject {
     func providerReportStartCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
     func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
-    func providerReportEndCall(with uuid: UUID)
+    func providerReportEndCall(with action: CXEndCallAction)
     func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool
     func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool
     func providerReportSendDTMF(with uuid: UUID, _ digits: String) -> Bool
@@ -127,7 +127,7 @@ extension CallProvider: CXProviderDelegate {
             action.fail()
             return
         }
-        delegate.providerReportEndCall(with: action.callUUID)
+        delegate.providerReportEndCall(with: action)
         action.fulfill()
     }
     

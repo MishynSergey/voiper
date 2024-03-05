@@ -210,14 +210,13 @@ extension CallModel: CallProviderDelegate {
         NotificationCenter.default.post(name: Notification.Name(rawValue: "ShowCall"), object: nil)
     }
     
-    func providerReportEndCall(with uuid: UUID) {
-        guard call.uuid == uuid else {
+    func providerReportEndCall(with action: CXEndCallAction) {
+        guard call.uuid == action.callUUID else {
             return
         }
         
-        if case SPCall.State.none = call.state {
-        } else {
-            call.disconnect()
+        if call.state != .none {
+            call.disconnect(with: action)
         }
 //        callKitCompletionCallback?(false)
 //        callKitCompletionCallback = nil
