@@ -90,7 +90,7 @@ extension CallModel {
         call.state = .start
         callVC?.updateUI()
         
-        let callHandle = CXHandle(type: .phoneNumber, value: call.handle) // .phoneNumber -> .generic ???
+        let callHandle = CXHandle(type: callManager.phoneNumber.provider == .telnyx ? .generic : .phoneNumber, value: call.handle)
         let startCallAction = CXStartCallAction(call: call.uuid, handle: callHandle)
         let transaction = CXTransaction(action: startCallAction)
 
@@ -114,7 +114,7 @@ extension CallModel {
             })
             callUpdate.remoteHandle = callHandle
             callUpdate.supportsDTMF = true
-            callUpdate.supportsHolding = false // true for telnyx
+            callUpdate.supportsHolding = callManager.phoneNumber.provider == .telnyx
             callUpdate.supportsGrouping = false
             callUpdate.supportsUngrouping = false
             callUpdate.hasVideo = false

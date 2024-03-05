@@ -80,10 +80,12 @@ extension CallProvider: CXProviderDelegate {
     public func providerDidBegin(_ provider: CXProvider) { }
     
     public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        delegate?.providerRepordAudioSessionActivation()
         audioDevice.isEnabled = true
     }
     
     public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        delegate?.providerRepordAudioSessionDeactivation()
         audioDevice.isEnabled = false
     }
     
