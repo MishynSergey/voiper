@@ -197,7 +197,7 @@ extension CallModel: CallProviderDelegate {
             return
         }
         audioDevice.isEnabled = false
-        createTwilioCall(for: call, with: completion)
+        createCall(for: call, with: completion)
     }
     
     func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
@@ -263,7 +263,7 @@ extension CallModel: CallProviderDelegate {
     
 // MARK: - Twilio Actions
 extension CallModel {
-    private func createTwilioCall(for call: SPCall, with completion: @escaping (Bool) -> ()) {
+    private func createCall(for call: SPCall, with completion: @escaping (Bool) -> ()) {
         _ = callManager.fetchAccessToken()
             .done { [weak self] token in
                 guard let self = self else { return }

@@ -8,8 +8,9 @@ public protocol CallIntentHandler {
     func handleStartCallIntent(_ handle: String)
 }
 
-public protocol VoipNotificationHandler: AnyObject {
+protocol VoipNotificationHandler: AnyObject {
     func handleTwilioVoipNotification(_ payload: [AnyHashable: Any])
+    func handleTelnyxVoipNotification(_ payload: [AnyHashable: Any])
 }
 
 public class CallFlow: NSObject, OnNotification {
@@ -136,9 +137,13 @@ public class CallFlow: NSObject, OnNotification {
 }
 
 extension CallFlow: VoipNotificationHandler {
-    public func handleTwilioVoipNotification(_ payload: [AnyHashable: Any]) {
+    func handleTwilioVoipNotification(_ payload: [AnyHashable: Any]) {
         print("TWILIO HANDLE VOIP")
         TwilioVoiceSDK.handleNotification(payload, delegate: self, delegateQueue: nil)
+    }
+    
+    func handleTelnyxVoipNotification(_ payload: [AnyHashable : Any]) {
+        
     }
 }
 
