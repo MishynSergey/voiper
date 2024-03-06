@@ -60,11 +60,11 @@ public class CallManager: NSObject {
         }
     }
     
-    func fetchAccessToken() -> Promise<String> {
+    func fetchAccessToken() -> Promise<TwilioAccessTokenResponse> {
         let promise: Promise<TwilioAccessTokenResponse> = service.execute(.getCallAccessToken(phoneNumber.id))
-        return promise.map { response -> String in
-            return response.token
-        }
+        return promise//.map { response -> String in
+            //return response.token
+//        }
     }
     
     private func registerForPush(with deviceToken: Data) {
@@ -74,9 +74,9 @@ public class CallManager: NSObject {
                 guard let self else { return Promise() }
                 switch phoneNumber.provider {
                 case .twilio:
-                    return registerForPushFromTwilio(with: deviceToken, and: token)
+                    return registerForPushFromTwilio(with: deviceToken, and: token.token)
                 case .telnyx:
-                    return registerForPushFromTelnyx(with: deviceToken, and: token)
+                    return registerForPushFromTelnyx(with: deviceToken, and: token.token)
                 case .unknown:
                     return Promise()
                 }
@@ -131,7 +131,7 @@ public class CallManager: NSObject {
         _ = fetchAccessToken()
             .then { token -> Promise<Void> in
                 return Promise { seal in
-                    TwilioVoiceSDK.unregister(accessToken: token, deviceToken: deviceToken, completion: { error in
+                    TwilioVoiceSDK.unregister(accessToken: token.token, deviceToken: deviceToken, completion: { error in
                         if let error = error {
                             seal.reject(error)
                         } else {

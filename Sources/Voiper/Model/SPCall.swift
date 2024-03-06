@@ -79,7 +79,7 @@ public final class SPCall: NSObject {
         closeSession()
     }
     
-    func connect(with token: String) {
+    func connect(with token: TwilioAccessTokenResponse) {
         state = .start
         connectingDate = Date()
         
@@ -100,8 +100,8 @@ public final class SPCall: NSObject {
         isOnHold ? txCall?.hold() : txCall?.unhold()
     }
     
-    private func twilioConnect(with token: String) {
-        let option = ConnectOptions(accessToken: token) { [handle] builder in
+    private func twilioConnect(with token: TwilioAccessTokenResponse) {
+        let option = ConnectOptions(accessToken: token.token) { [handle] builder in
             builder.params = ["To": handle]
         }
         
@@ -109,14 +109,14 @@ public final class SPCall: NSObject {
         createSocket()
     }
     
-    private func telnyxConnect(with token: String) {
-        guard let telnyxClient, let callerNumber else { return }
+    private func telnyxConnect(with token: TwilioAccessTokenResponse) {
+        guard let telnyxClient, let callerNumber, let telnyx = token.data else { return }
         if !telnyxClient.isConnected() {
             do {
                 try telnyxClient
                     .connect(
                         txConfig: TxConfig(
-                            token: token
+                            sipUser: telnyx.sipUsername, password: telnyx.sipPassword
                         ),
                         serverConfiguration: CallManager.txServerConfig
                     )
