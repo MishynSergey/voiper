@@ -76,7 +76,7 @@ public class CallManager: NSObject {
                 case .twilio:
                     return registerForPushFromTwilio(with: deviceToken, and: token.token)
                 case .telnyx:
-                    return registerForPushFromTelnyx(with: deviceToken, and: token.token)
+                    return registerForPushFromTelnyx(with: deviceToken, and: token.data!)
                 case .unknown:
                     return Promise()
                 }
@@ -96,14 +96,14 @@ public class CallManager: NSObject {
         }
     }
 
-    private func registerForPushFromTelnyx(with deviceToken: Data, and accessToken: String) -> Promise<Void> {
+    private func registerForPushFromTelnyx(with deviceToken: Data, and accessData: TelnyxCredentials) -> Promise<Void> {
         return Promise { [weak self] seal in
             guard let self else { seal.reject(ServiceError.undefined); return }
             do {
                 try telnyxClient?
                     .connect(
                         txConfig: TxConfig(
-                            token: accessToken,
+                            sipUser: accessData.sipUsername, password: accessData.sipPassword,
                             pushDeviceToken: deviceToken.reduce("", {$0 + String(format: "%02X", $1) })
                         ),
                         serverConfiguration: CallManager.txServerConfig
