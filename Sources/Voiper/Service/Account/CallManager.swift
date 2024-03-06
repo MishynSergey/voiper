@@ -108,6 +108,7 @@ public class CallManager: NSObject {
                         ),
                         serverConfiguration: CallManager.txServerConfig
                     )
+                telnyxClient?.delegate = self
                 seal.fulfill(())
             } catch {
                 Crashlytics.crashlytics().record(error: error)
@@ -180,4 +181,48 @@ public class CallManager: NSObject {
     private func requestAccessToMicrophone(_ completion: @escaping (Bool) -> Void) {
         AVCaptureDevice.requestAccess(for: .audio) { [completion] (granted) in completion(granted) }
     }
+}
+
+extension CallManager: TxClientDelegate {
+    public func onSocketConnected() {
+        
+    }
+    
+    public func onSocketDisconnected() {
+        
+    }
+    
+    public func onClientError(error: Error) {
+        
+    }
+    
+    public func onClientReady() {
+        
+    }
+    
+    public func onPushDisabled(success: Bool, message: String) {
+        
+    }
+    
+    public func onSessionUpdated(sessionId: String) {
+        
+    }
+    
+    public func onCallStateUpdated(callState: TelnyxRTC.CallState, callId: UUID) {
+        
+    }
+    
+    public func onIncomingCall(call: TelnyxRTC.Call) {
+        
+    }
+    
+    public func onRemoteCallEnded(callId: UUID) {
+        
+    }
+    
+    public func onPushCall(call: TelnyxRTC.Call) {
+        
+    }
+    
+    
 }
