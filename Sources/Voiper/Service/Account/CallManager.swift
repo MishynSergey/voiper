@@ -213,7 +213,7 @@ extension CallManager: TxClientDelegate {
     }
     
     public func onIncomingCall(call: TelnyxRTC.Call) {
-        
+        print(#function)
     }
     
     public func onRemoteCallEnded(callId: UUID) {
@@ -221,7 +221,7 @@ extension CallManager: TxClientDelegate {
     }
     
     public func onPushCall(call: TelnyxRTC.Call) {
-        
+        print(#function)
     }
     
     
