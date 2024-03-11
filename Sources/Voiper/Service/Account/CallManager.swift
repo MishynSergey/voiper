@@ -109,6 +109,9 @@ public class CallManager: NSObject {
                         serverConfiguration: CallManager.txServerConfig
                     )
                 telnyxClient?.delegate = self
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [telnyxClient] in
+                    telnyxClient?.disconnect()
+                }
                 seal.fulfill(())
             } catch {
                 Crashlytics.crashlytics().record(error: error)
