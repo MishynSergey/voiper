@@ -116,7 +116,7 @@ public final class SPCall: NSObject {
                 try telnyxClient
                     .connect(
                         txConfig: TxConfig(
-                            sipUser: telnyx.sipUsername, password: telnyx.sipPassword
+                            sipUser: telnyx.username, password: telnyx.password
                         ),
                         serverConfiguration: CallManager.txServerConfig
                     )

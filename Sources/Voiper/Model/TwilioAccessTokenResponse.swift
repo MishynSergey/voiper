@@ -15,11 +15,11 @@ extension TwilioAccessTokenResponse: CustomStringConvertible {
 }
 
 struct TelnyxCredentials: Decodable {
-    let sipPassword: String
-    let sipUsername: String
+    let password: String
+    let username: String
     
     enum CodingKeys: String, CodingKey {
-        case sipPassword = "sip_password"
-        case sipUsername = "sip_username"
+        case password = "password"
+        case username = "user_name"
     }
 }

@@ -103,7 +103,7 @@ public class CallManager: NSObject {
                 try telnyxClient?
                     .connect(
                         txConfig: TxConfig(
-                            sipUser: accessData.sipUsername, password: accessData.sipPassword,
+                            sipUser: accessData.username, password: accessData.password,
                             pushDeviceToken: deviceToken.reduce("", {$0 + String(format: "%02X", $1) })
                         ),
                         serverConfiguration: CallManager.txServerConfig
