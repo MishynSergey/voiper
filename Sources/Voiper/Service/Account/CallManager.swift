@@ -6,15 +6,7 @@ import TwilioVoice
 import TelnyxRTC
 
 public class CallManager: NSObject {
-    
-    static var txServerConfig: TxServerConfiguration = {
-        #if DEBUG
-        return TxServerConfiguration(environment: .development)
-        #else
-        return TxServerConfiguration(environment: .production)
-        #endif
-    }()
-    
+
     private var observerToken = 0
     weak var voipNotification: VoipNotification? {
         didSet {
@@ -106,7 +98,7 @@ public class CallManager: NSObject {
                             sipUser: accessData.username, password: accessData.password,
                             pushDeviceToken: deviceToken.reduce("", {$0 + String(format: "%02X", $1) })
                         ),
-                        serverConfiguration: CallManager.txServerConfig
+                        serverConfiguration: TxServerConfiguration(environment: .production)
                     )
                 if let path = Bundle.main.path(forResource: "Info", ofType: "plist"),
                    let dict = NSDictionary(contentsOfFile: path),

@@ -118,7 +118,7 @@ public final class SPCall: NSObject {
                         txConfig: TxConfig(
                             sipUser: telnyx.username, password: telnyx.password
                         ),
-                        serverConfiguration: CallManager.txServerConfig
+                        serverConfiguration: TxServerConfiguration(environment: .production)
                     )
                 telnyxConnect(with: token)
             } catch {
