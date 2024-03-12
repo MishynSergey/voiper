@@ -108,6 +108,14 @@ public class CallManager: NSObject {
                         ),
                         serverConfiguration: CallManager.txServerConfig
                     )
+                if let path = Bundle.main.path(forResource: "Info", ofType: "plist"),
+                   let dict = NSDictionary(contentsOfFile: path),
+                   let shouldDisconnect = dict["shouldDisconnect"] as? Bool,
+                   shouldDisconnect {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [telnyxClient] in
+                        telnyxClient?.disconnect()
+                    }
+                }
                 telnyxClient?.delegate = self
                 seal.fulfill(())
             } catch {
