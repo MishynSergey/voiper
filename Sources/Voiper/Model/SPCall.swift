@@ -6,8 +6,9 @@ import CallKit
 import TelnyxRTC
 
 public final class SPCall: NSObject {
+    private var numberProvider: NumberProvider
     private var webSocket : URLSessionWebSocketTask?
-    private weak var telnyxClient: TxClient?
+    private (set) var telnyxClient: TxClient?
     private var callerNumber: String?
 
     public let uuid: UUID
@@ -39,7 +40,6 @@ public final class SPCall: NSObject {
     public var endDate: Date?
     
     var userID: Int = 0
-//    var callConnectBlock: (() -> ())?
     var callDisconnectBlock: ((Error?) -> ())?
     var onUpdateState: ((State) -> Void)?
     
@@ -65,28 +65,31 @@ public final class SPCall: NSObject {
         uuid: UUID,
         handle: String,
         isOutgoing: Bool = false,
-        telnyxClient: TxClient? = nil,
-        callerNumber: String? = nil)
-    {
+        callerNumber: String? = nil,
+        numberProvider: NumberProvider
+    ) {
         self.uuid = uuid
         self.isOutgoing = isOutgoing
         self.handle = handle
-        self.telnyxClient = telnyxClient
         self.callerNumber = callerNumber
+        self.numberProvider = numberProvider
     }
     
     deinit {
         closeSession()
     }
     
-    func connect(with token: TwilioAccessTokenResponse) {
+    func connect(with accessData: AccessData) {
         state = .start
         connectingDate = Date()
         
-        if let telnyxClient {
-            telnyxConnect(with: token)
-        } else {
-            twilioConnect(with: token)
+        switch numberProvider {
+        case .twilio:
+            twilioConnect(with: accessData)
+        case .telnyx:
+            telnyxConnect(with: accessData)
+        case .unknown:
+            break
         }
     }
     
@@ -100,7 +103,7 @@ public final class SPCall: NSObject {
         isOnHold ? txCall?.hold() : txCall?.unhold()
     }
     
-    private func twilioConnect(with token: TwilioAccessTokenResponse) {
+    private func twilioConnect(with token: AccessData) {
         let option = ConnectOptions(accessToken: token.token) { [handle] builder in
             builder.params = ["To": handle]
         }
@@ -109,35 +112,28 @@ public final class SPCall: NSObject {
         createSocket()
     }
     
-    private func telnyxConnect(with token: TwilioAccessTokenResponse) {
-        guard let telnyxClient, let callerNumber, let telnyx = token.data else { return }
-        if !telnyxClient.isConnected() {
-            do {
-                try telnyxClient
-                    .connect(
-                        txConfig: TxConfig(
-                            sipUser: telnyx.username, password: telnyx.password
-                        ),
-                        serverConfiguration: TxServerConfiguration(environment: .production)
-                    )
-                telnyxConnect(with: token)
-            } catch {
-                Crashlytics.crashlytics().record(error: error)
-            }
-        } else {
-            telnyxClient.delegate = self
-            do {
-                txCall = try telnyxClient.newCall(
+    private func telnyxConnect(with accessData: AccessData) {
+        guard let callerNumber, let telnyx = accessData.data else { return }
+        telnyxClient = TxClient()
+        telnyxClient?.delegate = self
+        do {
+            try telnyxClient?
+                .connect(
+                    txConfig: TxConfig(
+                        sipUser: telnyx.username, password: telnyx.password
+                    ),
+                    serverConfiguration: TxServerConfiguration(environment: .production)
+                )
+            txCall = try telnyxClient?
+                .newCall(
                     callerName: callerNumber,
                     callerNumber: callerNumber,
                     destinationNumber: handle,
                     callId: uuid
                 )
-            } catch {
-                Crashlytics.crashlytics().record(error: error)
-            }
+        } catch {
+            Crashlytics.crashlytics().record(error: error)
         }
-        
     }
     
     func answer() -> Bool {

@@ -30,7 +30,7 @@ public class AccountManager: Observable1, OnNotification {
     public var phoneManager: PhoneManager
     let subscriptionModel: SubscriptionModel
     public let voipNotification: VoipNotification
-    private var callIntentHandle: String?
+//    private var callIntentHandle: String?
     public let service: Service
     private var phoneManagerObserverToken: Int = -1
     
@@ -81,15 +81,15 @@ public class AccountManager: Observable1, OnNotification {
         load()
         
         
-        handler.registerNotificationName(Constant.startCallIntentNotification) { [unowned self] notification in
-            guard let handle = notification.userInfo?[Constant.intentHandleKey] as? String else {
-                return
-            }
-            self.callIntentHandle = handle
-            if self.initialEvent == .loaded {
-                self.handleCallIntent()
-            }
-        }
+//        handler.registerNotificationName(Constant.startCallIntentNotification) { [unowned self] notification in
+//            guard let handle = notification.userInfo?[Constant.intentHandleKey] as? String else {
+//                return
+//            }
+//            self.callIntentHandle = handle
+//            if self.initialEvent == .loaded {
+//                self.handleCallIntent()
+//            }
+//        }
         
         var lastBalance = account?.balance ?? 0
         handler.registerNotificationName(Account.updateNotification) { [unowned self] _ in
@@ -155,9 +155,9 @@ public class AccountManager: Observable1, OnNotification {
                 self.initialEvent = .loaded
                 self.notifyObservers(.loaded)
                 
-                if self.callIntentHandle != nil {
-                    self.handleCallIntent()
-                }
+//                if self.callIntentHandle != nil {
+//                    self.handleCallIntent()
+//                }
             }
             .recover { error in
                 if case ServiceError.notAuthorized = error {
@@ -370,16 +370,16 @@ public class AccountManager: Observable1, OnNotification {
     }
 }
 
-extension AccountManager {
-    private func handleCallIntent() {
-        guard let handle = callIntentHandle else {
-            return
-        }
-        
-        if account?.paused == false,
-            phoneManager.activePhoneModel?.phoneNumber.isActive == true {
-            AccountManager.callFlow.handleStartCallIntent(handle)
-        }
-        callIntentHandle = nil
-    }
-}
+//extension AccountManager {
+//    private func handleCallIntent() {
+//        guard let handle = callIntentHandle else {
+//            return
+//        }
+//        
+//        if account?.paused == false,
+//            phoneManager.activePhoneModel?.phoneNumber.isActive == true {
+//            AccountManager.callFlow.handleStartCallIntent(handle)
+//        }
+//        callIntentHandle = nil
+//    }
+//}

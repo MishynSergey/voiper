@@ -4,9 +4,9 @@ import TwilioVoice
 import PromiseKit
 import CallKit
 
-public protocol CallIntentHandler {
-    func handleStartCallIntent(_ handle: String)
-}
+//public protocol CallIntentHandler {
+//    func handleStartCallIntent(_ handle: String)
+//}
 
 protocol VoipNotificationHandler: AnyObject {
     func handleTwilioVoipNotification(_ payload: [AnyHashable: Any])
@@ -147,25 +147,6 @@ extension CallFlow: VoipNotificationHandler {
     }
 }
 
-extension CallFlow: CallIntentHandler {
-    
-    public func handleStartCallIntent(_ handle: String) {
-        let set = CharacterSet(charactersIn: "+1234567890")
-        let cleanHandle = handle.replacingOccurrences(of: " ", with: "")
-        .replacingOccurrences(of: "-", with: "")
-        .replacingOccurrences(of: "(", with: "")
-        .replacingOccurrences(of: ")", with: "")
-        .trimmingCharacters(in: set.inverted)
-        
-        if let uid = CallMagic.UID {
-            let call = SPCall(uuid: uid, handle: cleanHandle, isOutgoing: true)
-            _ = start(call)
-        } else {
-            print("TWILIO INVITE NO UID")
-        }
-    
-    }
-}
 
 extension CallFlow: NotificationDelegate {
     public func cancelledCallInviteReceived(cancelledCallInvite: CancelledCallInvite, error: Error) {
@@ -174,7 +155,7 @@ extension CallFlow: NotificationDelegate {
     
     public func callInviteReceived(callInvite: CallInvite) {
         if let uid = CallMagic.UID {
-            let call = SPCall(uuid: uid , handle: callInvite.from ?? "")
+            let call = SPCall(uuid: uid , handle: callInvite.from ?? "", numberProvider: .twilio)
             call.twilioCallInvite = callInvite
             _ = start(call)
         }

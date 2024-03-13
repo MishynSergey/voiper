@@ -275,7 +275,7 @@ public class NW {
     }
     
     public func getCallAccessToken(with phoneNumberID: Int, completion: @escaping (Swift.Result<String, Error>) -> Void) {
-        let promise: Promise<TwilioAccessTokenResponse> = service.execute(.getCallAccessToken(phoneNumberID))
+        let promise: Promise<AccessData> = service.execute(.getCallAccessToken(phoneNumberID))
         promise.done { result in
             completion(.success(result.token))
         }.catch { error in

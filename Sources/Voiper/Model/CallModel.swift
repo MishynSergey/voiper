@@ -32,18 +32,9 @@ public class CallModel {
         }
     }
     private let callKitCallController = CXCallController()
-//    private var callKitCompletionCallback: ((Bool)-> ())? = nil
     public var contact: Contact?
     
     private func observeCall() {
-//        call.callConnectBlock = { [weak self] in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            strongSelf.callKitCompletionCallback?(true)
-//            strongSelf.callKitCompletionCallback = nil
-//            strongSelf.callVC?.updateUI()
-//        }
         call.callDisconnectBlock = { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -218,8 +209,6 @@ extension CallModel: CallProviderDelegate {
         if call.state != .none {
             call.disconnect(with: action)
         }
-//        callKitCompletionCallback?(false)
-//        callKitCompletionCallback = nil
         callVC?.updateUI()
         callVC?.durationTimer?.invalidate()
         call.endDate = Date()
@@ -252,11 +241,11 @@ extension CallModel: CallProviderDelegate {
     }
     
     func providerRepordAudioSessionActivation() {
-        callManager.telnyxClient?.isAudioDeviceEnabled = true
+        call.telnyxClient?.isAudioDeviceEnabled = true
     }
     
     func providerRepordAudioSessionDeactivation() {
-        callManager.telnyxClient?.isAudioDeviceEnabled = false
+        call.telnyxClient?.isAudioDeviceEnabled = false
     }
 }
     
@@ -268,7 +257,6 @@ extension CallModel {
                 guard let self = self else { return }
                 call.connect(with: token)
                 self.callVC?.updateUI()
-//                self.callKitCompletionCallback = completion
             }
             .catch { error in
                 completion(false)
@@ -276,9 +264,7 @@ extension CallModel {
     }
 
     private func answer(_ call: SPCall, with completion: @escaping (Bool) -> Swift.Void) {
-        if call.answer() {
-//            callKitCompletionCallback = completion
-        } else {
+        if !call.answer() {
             completion(false)
         }
         callVC?.updateUI()

@@ -2,13 +2,12 @@
 
 import Foundation
 
-public struct TwilioAccessTokenResponse: Decodable {
+public struct AccessData: Decodable {
     let token: String
-    let identity: String?
     let data: TelnyxCredentials?
 }
 
-extension TwilioAccessTokenResponse: CustomStringConvertible {
+extension AccessData: CustomStringConvertible {
     public var description: String {
         return jsonFormatDescription((name: "token", value: token))
     }
