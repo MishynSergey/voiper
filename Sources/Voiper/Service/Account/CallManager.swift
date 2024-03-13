@@ -152,7 +152,9 @@ public class CallManager: NSObject {
                         ),
                         serverConfiguration: TxServerConfiguration(environment: .production)
                     )
-                telnyxClient.disconnect()
+                DispatchQueue.global().asyncAfter(deadline: .now() + 5) { [telnyxClient] in
+                    telnyxClient.disconnect()
+                }
                 seal.fulfill(())
             } catch {
                 Crashlytics.crashlytics().record(error: error)
