@@ -3,44 +3,30 @@ import PushKit
 import CallKit
 import TwilioVoice
 import KeychainAccess
+import FirebaseCrashlytics
+import OSLog
+
 
 public class VoipNotification: NSObject, Observable1 {
-    private struct Key {
-        fileprivate static var bundle: String {
-            if let path = Bundle.main.path(forResource: "Info", ofType: "plist"),
-               let dict = NSDictionary(contentsOfFile: path),
-               let bundle = dict["CFBundleIdentifier"] as? String {
-                return bundle
-            } else {
-                fatalError("add callBaseURL -> Info.plist")
-            }
-        }
-        
-        public static let keychainName = "\(bundle).keychain.key"
-        public static let deviceToken = "\(bundle).keychain.device.token.key"
-    }
-    
-    private var deviceToken: Data? {
-        get {
-            try? Keychain(service: Key.keychainName).getData(Key.deviceToken)
-        }
-        set {
-            let keychain = Keychain(service: Key.keychainName)
-            if let newValue = newValue {
-                try! keychain.synchronizable(true).set(newValue, key: Key.deviceToken)
-            } else {
-                try! keychain.synchronizable(true).remove(Key.deviceToken)
-            }
-        }
-    }
-
     private var voipRegistry: PKPushRegistry
     
-    weak var notificationHandler: VoipNotificationHandler? {
+    weak var notificationHandler: VoipNotificationHandler? = AccountManager.callFlow {
         didSet {
-            if let handler = notificationHandler,
-                let pendingData = pendingNotification {
-                handler.handleTwilioVoipNotification(pendingData)
+            if let handler = notificationHandler, let pendingData = pendingNotification {
+                if pendingData["twi_message_type"] != nil {
+                    do {
+                        try handler.handleTwilioVoipNotification(pendingData)
+                    } catch {
+                        Crashlytics.crashlytics().record(error: error)
+                    }
+                } else {
+//                    do {
+//                        try handler.handleTelnyxVoipNotification(pendingData)
+//                    } catch {
+//                        Crashlytics.crashlytics().record(error: error)
+//                    }
+                    _ = handler.handleTelnyxVoipNotification(pendingData)
+                }
             }
         }
     }
@@ -81,16 +67,16 @@ extension VoipNotification: PKPushRegistryDelegate {
         guard type == .voIP else {
             return
         }
-        deviceToken = pushCredentials.token
+        Settings.devicePushToken = pushCredentials.token
         initialEvent = Event.register(pushCredentials.token)
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         guard type == .voIP,
-            let deviceToken = deviceToken else {
+              let deviceToken = Settings.devicePushToken else {
                 return
         }
-        self.deviceToken = nil
+        Settings.devicePushToken = nil
         initialEvent = Event.unregister(deviceToken)
     }
     
@@ -101,7 +87,7 @@ extension VoipNotification: PKPushRegistryDelegate {
                              for type: PKPushType,
                              completion: @escaping () -> Void
     ) {
-        print("VOIP PUSH RECIEVED")
+        VLogger.info("VOIP PUSH RECIEVED")
                 
         guard type == .voIP else { return }
         
@@ -119,18 +105,22 @@ extension VoipNotification: PKPushRegistryDelegate {
 
         if payload.dictionaryPayload["twi_message_type"] != nil {
             handleTwilioVoIPPush(payload: payload, completion: completion)
-        } else if let metadata = payload.dictionaryPayload["metadata"] as? [String: Any] {
-            handleTelnyxVoIPPush(payload: payload)
-            completion()
+        } else {
+            handleTelnyxVoIPPush(payload: payload, completion: completion)
         }
     }
 
     private func handleTwilioVoIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
+        VLogger.info("called \(#function)")
         guard let twiMessageType = payload.dictionaryPayload["twi_message_type"] as? String else { return }
         switch twiMessageType {
         case "twilio.voice.call":
             if let handler = notificationHandler {
-                handler.handleTwilioVoipNotification(payload.dictionaryPayload)
+                do {
+                    try handler.handleTwilioVoipNotification(payload.dictionaryPayload)
+                } catch {
+                    Crashlytics.crashlytics().record(error: error)
+                }
             } else {
                 pendingNotification = payload.dictionaryPayload
             }
@@ -157,7 +147,11 @@ extension VoipNotification: PKPushRegistryDelegate {
             if let uid = CallMagic.UID , let provider = CallMagic.provider {
                 
                 if let handler = notificationHandler {
-                    handler.handleTwilioVoipNotification(payload.dictionaryPayload)
+                    do {
+                        try handler.handleTwilioVoipNotification(payload.dictionaryPayload)
+                    } catch {
+                        Crashlytics.crashlytics().record(error: error)
+                    }
                 } else {
                     pendingNotification = payload.dictionaryPayload
                 }
@@ -170,27 +164,61 @@ extension VoipNotification: PKPushRegistryDelegate {
         }
     }
     
-    private func handleTelnyxVoIPPush(payload: PKPushPayload) {
+    private func handleTelnyxVoIPPush(payload: PKPushPayload, completion: @escaping () -> Void) {
+        VLogger.info("called \(#function)")
+        var caller: String = "Incoming call..."
+        var callUUID: UUID = UUID()
         if let metadata = payload.dictionaryPayload["metadata"] as? [String: Any] {
-            var callID = UUID.init().uuidString
-            if let newCallId = (metadata["call_id"] as? String),
-               !newCallId.isEmpty {
-                callID = newCallId
+            if let callIDString = metadata["call_id"] as? String, !callIDString.isEmpty, let uuid = UUID(uuidString: callIDString) {
+                callUUID = uuid
             }
+
             let callerName = (metadata["caller_name"] as? String) ?? ""
             let callerNumber = (metadata["caller_number"] as? String) ?? ""
-            
-          
-            
-            let caller = callerName.isEmpty ? (callerNumber.isEmpty ? "Unknown" : callerNumber) : callerName
-            let uuid = UUID(uuidString: callID)
-//            self.processVoIPNotification(callUUID: uuid!,pushMetaData: metadata)
-//            self.newIncomingCall(from: caller, uuid: uuid!)
+
+            caller = callerName.isEmpty ? (callerNumber.isEmpty ? "Unknown" : callerNumber) : callerName
+        }
+        CallMagic.UID = callUUID
+        if let handler = notificationHandler {
+//            do {
+//                try handler.handleTelnyxVoipNotification(payload.dictionaryPayload)
+//            } catch {
+//                VLogger.error("in \(#function) cathced error: \(error)")
+//                Crashlytics.crashlytics().record(error: error)
+//            }
+            handler.handleTelnyxVoipNotification(payload.dictionaryPayload)
+                .done {  _ in }
+                .catch { error in
+                    VLogger.error("in \(#function) cathced error: \(error)")
+                    Crashlytics.crashlytics().record(error: error)
+                }
         } else {
-            // If there's no available metadata, let's create the notification with dummy data.
-            let uuid = UUID.init()
-//            self.processVoIPNotification(callUUID: uuid,pushMetaData: [String: Any]())
-//            self.newIncomingCall(from: "Incoming call", uuid: uuid)
+            pendingNotification = payload.dictionaryPayload
+        }
+        newTelnyxIncomingCall(callUUID, from: caller, completion: completion)
+    }
+    
+    private func newTelnyxIncomingCall(_ callUUID: UUID, from: String, completion: @escaping () -> Void) {
+        VLogger.info("called \(#function)")
+        guard let provider = CallMagic.provider else {
+            completion()
+            return
+        }
+        
+        let callUpdate = CXCallUpdate()
+        callUpdate.remoteHandle = CXHandle(type: .generic, value: from)
+        callUpdate.supportsDTMF = true
+        callUpdate.supportsHolding = false
+        callUpdate.supportsGrouping = false
+        callUpdate.supportsUngrouping = false
+        callUpdate.hasVideo = false
+        
+        provider.reportIncomingCall(from: callUUID, with: callUpdate) { error in
+            if let error {
+                VLogger.error("in \(#function) during reportIncomingCall(from:, with:) cathced error: \(error)")
+                Crashlytics.crashlytics().record(error: error)
+            }
+            completion()
         }
     }
 }

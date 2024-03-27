@@ -3,7 +3,7 @@ import KeychainAccess
 
 public class Settings {
     
-    public struct Key {
+    internal struct Key {
         fileprivate static var bundle: String {
             if let path = Bundle.main.path(forResource: "Info", ofType: "plist"),
                let dict = NSDictionary(contentsOfFile: path),
@@ -14,14 +14,18 @@ public class Settings {
             }
         }
         
-        public static let keychainName = "\(bundle).keychain.key"
-        public static let userToken = "\(bundle).keychain.user.token.key"
-        public static let deviceId = "\(bundle).device.id.key"
-        public static let restorationDate = "\(bundle).restoration.date.key"
-        public static let hasAccessContact = "\(bundle).hasAvailable.key"
-        public static let pinCodeLockKey = "\(bundle).pinCodeLockKey.key"
-        public static let datePinLockKey = "\(bundle).datePinLockKey.key"
-        public static let lastVisitDateKey =  "\(bundle).lastVisit.key"
+        internal static let keychainName = "\(bundle).keychain.key"
+        internal static let userToken = "\(bundle).keychain.user.token.key"
+        internal static let deviceId = "\(bundle).device.id.key"
+        internal static let restorationDate = "\(bundle).restoration.date.key"
+        internal static let hasAccessContact = "\(bundle).hasAvailable.key"
+        internal static let pinCodeLockKey = "\(bundle).pinCodeLockKey.key"
+        internal static let datePinLockKey = "\(bundle).datePinLockKey.key"
+        internal static let lastVisitDateKey =  "\(bundle).lastVisit.key"
+        
+        internal static let devicePushToken = "\(bundle).keychain.device.pushtoken.key"
+        internal static let sipUsername = "\(bundle).keychain.sip.username.key"
+        internal static let sipPassword = "\(bundle).keychain.sip.password.key"
     }
     
     public static var deviceId: String {
@@ -72,6 +76,48 @@ public class Settings {
                 try! keychain.synchronizable(true).set(newValue, key: Key.userToken)
             } else {
                 try! keychain.synchronizable(true).remove(Key.userToken)
+            }
+        }
+    }
+    
+    internal static var devicePushToken: Data? {
+        get {
+            try? Keychain(service: Key.keychainName).getData(Key.devicePushToken)
+        }
+        set {
+            let keychain = Keychain(service: Key.keychainName)
+            if let newValue = newValue {
+                try! keychain.synchronizable(true).set(newValue, key: Key.devicePushToken)
+            } else {
+                try! keychain.synchronizable(true).remove(Key.devicePushToken)
+            }
+        }
+    }
+    
+    internal static var sipUsername: String? {
+        get {
+            try? Keychain(service: Key.keychainName).getString(Key.sipUsername)
+        }
+        set {
+            let keychain = Keychain(service: Key.keychainName)
+            if let newValue = newValue {
+                try! keychain.synchronizable(true).set(newValue, key: Key.sipUsername)
+            } else {
+                try! keychain.synchronizable(true).remove(Key.sipUsername)
+            }
+        }
+    }
+
+    internal static var sipPassword: String? {
+        get {
+            try? Keychain(service: Key.keychainName).getString(Key.sipPassword)
+        }
+        set {
+            let keychain = Keychain(service: Key.keychainName)
+            if let newValue = newValue {
+                try! keychain.synchronizable(true).set(newValue, key: Key.sipPassword)
+            } else {
+                try! keychain.synchronizable(true).remove(Key.sipPassword)
             }
         }
     }

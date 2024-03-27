@@ -15,7 +15,7 @@ public class PhoneManager: Observable1 {
     public var observers: [Int : (PhoneManager.Event) -> Void] = [:]
     
     private let service: Service
-    public var phoneModels: [PhoneModel] = []
+    public private (set) var phoneModels: [PhoneModel] = []
     private let realmPhones: Results<PhoneNumberRealm>
     private var token: NotificationToken?
     

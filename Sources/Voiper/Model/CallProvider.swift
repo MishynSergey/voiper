@@ -6,10 +6,11 @@ import PushKit
 import CallKit
 import TwilioVoice
 import UIKit
+import TelnyxRTC
 
 protocol CallProviderDelegate: AnyObject {
     func providerReportStartCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
-    func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ())
+    func providerReportAnswerCall(with action: CXAnswerCallAction, with completion: @escaping (Bool) -> ())
     func providerReportEndCall(with action: CXEndCallAction)
     func providerReportHoldCall(with uuid: UUID, _ onHold: Bool) -> Bool
     func providerReportMuteCall(with uuid: UUID, _ onMute: Bool) -> Bool
@@ -109,12 +110,18 @@ extension CallProvider: CXProviderDelegate {
     }
     
     public func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
+        VLogger.info("called \(#function)")
         guard let delegate = delegate else {
+            if let callManager = AccountManager.callFlow.callManager, callManager.phoneModel.phoneNumber.provider == .telnyx {
+                callManager.telnyxClient?.answerFromCallkit(answerAction: action)
+                return
+            }
+            VLogger.error("in \(#function) didn't find delegate")
             action.fail()
             return
         }
-        delegate.providerReportAnswerCall(with: action.callUUID) { success in
-            if (success) {
+        delegate.providerReportAnswerCall(with: action) { success in
+            if success {
                 action.fulfill()
             } else {
                 action.fail()

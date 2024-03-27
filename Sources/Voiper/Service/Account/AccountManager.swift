@@ -75,9 +75,9 @@ public class AccountManager: Observable1, OnNotification {
     
     private init(service: Service) {
         self.service = service
+        voipNotification = VoipNotification()
         phoneManager = PhoneManager(service: service)
         subscriptionModel = SubscriptionModel()
-        voipNotification = VoipNotification()
         load()
         
         

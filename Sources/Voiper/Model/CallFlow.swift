@@ -4,13 +4,9 @@ import TwilioVoice
 import PromiseKit
 import CallKit
 
-//public protocol CallIntentHandler {
-//    func handleStartCallIntent(_ handle: String)
-//}
-
 protocol VoipNotificationHandler: AnyObject {
-    func handleTwilioVoipNotification(_ payload: [AnyHashable: Any])
-    func handleTelnyxVoipNotification(_ payload: [AnyHashable: Any])
+    func handleTwilioVoipNotification(_ payload: [AnyHashable: Any]) throws
+    func handleTelnyxVoipNotification(_ payload: [AnyHashable: Any]) -> Promise<Void>
 }
 
 public class CallFlow: NSObject, OnNotification {
@@ -55,6 +51,7 @@ public class CallFlow: NSObject, OnNotification {
     }
     
     public func start(_ call: SPCall) -> Promise<Void> {
+        VLogger.info("VOIP PUSH RECIEVED")
         return Promise { [weak self] seal in
             guard let self else { seal.fulfill(()); return }
           
@@ -86,6 +83,10 @@ public class CallFlow: NSObject, OnNotification {
 
         endCallViewController.callWasEnded(callModel: callModel)
         window.rootViewController = endCallViewController
+    }
+    
+    func handleCancelledCallInvite(_ callInvite: CancelledCallInvite) {
+        callModel?.handleNotifiactionCancel(callInvite)
     }
 
     func hideCall() {
@@ -137,32 +138,33 @@ public class CallFlow: NSObject, OnNotification {
 }
 
 extension CallFlow: VoipNotificationHandler {
-    func handleTwilioVoipNotification(_ payload: [AnyHashable: Any]) {
-        print("TWILIO HANDLE VOIP")
-        TwilioVoiceSDK.handleNotification(payload, delegate: self, delegateQueue: nil)
-    }
-    
-    func handleTelnyxVoipNotification(_ payload: [AnyHashable : Any]) {
-        
-    }
-}
-
-
-extension CallFlow: NotificationDelegate {
-    public func cancelledCallInviteReceived(cancelledCallInvite: CancelledCallInvite, error: Error) {
-        callModel?.handleNotifiactionCancel(cancelledCallInvite)
-    }
-    
-    public func callInviteReceived(callInvite: CallInvite) {
-        if let uid = CallMagic.UID {
-            let call = SPCall(uuid: uid , handle: callInvite.from ?? "", numberProvider: .twilio)
-            call.twilioCallInvite = callInvite
-            _ = start(call)
+    func handleTwilioVoipNotification(_ payload: [AnyHashable: Any]) throws {
+        VLogger.info("called \(#function)")
+        guard let twilioPhoneModel = AccountManager.shared.phoneManager.phoneModels.first(where: { $0.phoneNumber.isActive && $0.phoneNumber.provider == .twilio }) else {
+            throw ServiceError.undefined
         }
+        callManager = twilioPhoneModel.callManager
+        twilioPhoneModel.callManager.processTwilioVoIPCall(payload: payload)
     }
     
-    func notificationError(_ error: Error) {
-        print("Twilio notification error: \(error.localizedDescription)")
+    func handleTelnyxVoipNotification(_ payload: [AnyHashable: Any]) -> Promise<Void> {
+        VLogger.info("called \(#function)")
+        guard let telnyxPhoneModel = AccountManager.shared.phoneManager.phoneModels.first(where: { $0.phoneNumber.isActive && $0.phoneNumber.provider == .telnyx }) else {
+            VLogger.error("in \(#function) didnt find telnyxPhoneModel")
+            return Promise<Void>(error: ServiceError.undefined)
+        }
+        callManager = telnyxPhoneModel.callManager
+        guard let metadata = payload["metadata"] as? [String: Any] else {
+            VLogger.error("in \(#function) didnt find metadata")
+            return Promise<Void>(error: ServiceError.undefined)
+        }
+        let callUUID: UUID
+        if let callIDString = metadata["call_id"] as? String, !callIDString.isEmpty, let uuid = UUID(uuidString: callIDString) {
+            callUUID = uuid
+        } else {
+            callUUID = UUID()
+        }
+        return telnyxPhoneModel.callManager.processTelnyxVoIPCall(callUUID, metadata: metadata)
     }
 }
 

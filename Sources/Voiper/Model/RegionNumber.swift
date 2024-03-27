@@ -71,7 +71,7 @@ public struct RegionNumber: Decodable {
         self.addressRequired = try container.decode(Int.self, forKey: .addressRequired)
         self.renewPrice = try container.decodeIfPresent(Int.self, forKey: .renewPrice) ?? 0
         self.source = try container.decodeIfPresent(RegionNumber.Source.self, forKey: .source)
-        self.note = try container.decode(String.self, forKey: .note)
+        self.note = try container.decodeIfPresent(String.self, forKey: .note)
         self.provider = try container.decode(NumberProvider.self, forKey: .provider)
     }
 }

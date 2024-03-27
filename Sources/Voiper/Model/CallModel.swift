@@ -56,6 +56,18 @@ public class CallModel {
         }
     }
     
+    
+    public var isMuted: Bool {
+        switch callManager.phoneNumber.provider {
+        case .twilio:
+            return call.twilioCall?.isMuted ?? false
+        case .telnyx:
+            return !(callManager.telnyxClient?.isAudioDeviceEnabled ?? false)
+        case .unknown:
+            return false
+        }
+    }
+    
     func handleCall(completion: (()->())? = nil) {
         if call.isOutgoing {
             reqeustStart(call)
@@ -131,11 +143,12 @@ extension CallModel {
         
         if let uid = CallMagic.UID , let provider = CallMagic.provider, let update = CallMagic.update {
             CallMagic.update = nil
-            provider.reportIncomingCall(from: uid, with: update) { error in
-              
+            provider.reportIncomingCall(from: uid, with: update) { [weak self] error in
+                guard let self else { return }
                 if let error = error {
                     self.call.state = .failed(error)
                     self.callVC?.updateUI()
+                    Crashlytics.crashlytics().record(error: error)
                     print("Failed to report incoming call successfully: \(error.localizedDescription).")
                     print("call UUID \(call.uuid)")
                 }
@@ -158,10 +171,14 @@ extension CallModel {
 
         let endCallAction = CXEndCallAction(call: call.uuid)
         let transaction = CXTransaction(action: endCallAction)
-        callKitCallController.request(transaction) { error in
+        callKitCallController.request(transaction) { [callFlow] error in
             if let error = error {
+                Crashlytics.crashlytics().record(error: error)
                 print("EndCallAction transaction request failed: \(error.localizedDescription).")
                 print("call UUID \(call.uuid)")
+                Double(1).delay { [callFlow] in
+                    callFlow.endCall()
+                }
                 return
             }
             print("EndCallAction transaction request successful")
@@ -173,6 +190,7 @@ extension CallModel {
         let transaction = CXTransaction(action: action)
         callKitCallController.request(transaction) { error in
             if let error = error {
+                Crashlytics.crashlytics().record(error: error)
                 print("\(action.description): \(error.localizedDescription)")
             }
         }
@@ -188,16 +206,20 @@ extension CallModel: CallProviderDelegate {
             return
         }
         audioDevice.isEnabled = false
+        callManager.telnyxClient?.isAudioDeviceEnabled = false
         createCall(for: call, with: completion)
     }
     
-    func providerReportAnswerCall(with uuid: UUID, with completion: @escaping (Bool) -> ()) {
-        guard call.uuid == uuid else {
+    func providerReportAnswerCall(with action: CXAnswerCallAction, with completion: @escaping (Bool) -> ()) {
+        VLogger.info("called \(#function)")
+        guard call.uuid == action.callUUID else {
+            VLogger.error("in \(#function) call.uuid and action.callUUID didn't match")
             completion(false)
             return
         }
         audioDevice.isEnabled = false
-        answer(call, with: completion)
+        callManager.telnyxClient?.isAudioDeviceEnabled = false
+        answer(call, action: action, with: completion)
         NotificationCenter.default.post(name: Notification.Name(rawValue: "ShowCall"), object: nil)
     }
     
@@ -206,6 +228,7 @@ extension CallModel: CallProviderDelegate {
             return
         }
         
+        callManager.telnyxClient?.endCallFromCallkit(endAction: action)
         if call.state != .none {
             call.disconnect(with: action)
         }
@@ -241,30 +264,38 @@ extension CallModel: CallProviderDelegate {
     }
     
     func providerRepordAudioSessionActivation() {
-        call.telnyxClient?.isAudioDeviceEnabled = true
+        callManager.telnyxClient?.isAudioDeviceEnabled = true
     }
     
     func providerRepordAudioSessionDeactivation() {
-        call.telnyxClient?.isAudioDeviceEnabled = false
+        callManager.telnyxClient?.isAudioDeviceEnabled = false
     }
 }
     
 // MARK: - Twilio Actions
 extension CallModel {
     private func createCall(for call: SPCall, with completion: @escaping (Bool) -> ()) {
-        _ = callManager.fetchAccessToken()
-            .done { [weak self] token in
-                guard let self = self else { return }
-                call.connect(with: token)
+        callManager
+            .connectRemoteCallWithLocalCall(call)
+            .done { [weak self] _ in
+                guard let self else { return }
                 self.callVC?.updateUI()
+                completion(true)
             }
             .catch { error in
+                Crashlytics.crashlytics().record(error: error)
                 completion(false)
             }
     }
 
-    private func answer(_ call: SPCall, with completion: @escaping (Bool) -> Swift.Void) {
-        if !call.answer() {
+    private func answer(_ call: SPCall, action: CXAnswerCallAction, with completion: @escaping (Bool) -> Swift.Void) {
+        VLogger.info("called \(#function)")
+        switch callManager.phoneNumber.provider {
+        case .twilio:
+            completion(call.answer())
+        case .telnyx:
+            callManager.telnyxClient?.answerFromCallkit(answerAction: action)
+        case .unknown:
             completion(false)
         }
         callVC?.updateUI()
