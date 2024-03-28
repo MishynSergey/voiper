@@ -286,7 +286,7 @@ public extension SPCall {
                 return 5
             case .ended:
                 return 6
-            case .failed(let error):
+            case .failed:
                 return 7
             }
         }

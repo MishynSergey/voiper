@@ -80,7 +80,6 @@ public class Service: ServiceProtocol {
                     seal.reject(ServiceError.undefined)
                 }
             case .success(let data):
-                print(String(data: data, encoding: .utf8))
                 let decoder = JSONDecoder.serviceDecoder
                 do {
                     let decodedObject = try decoder.decode(Response.self, from: data)

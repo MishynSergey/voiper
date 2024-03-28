@@ -77,7 +77,7 @@ public class ContactsManager {
                 let fetchPredicate = CNContact.predicateForContactsInContainer(withIdentifier: container.identifier)
                 
                 do {
-                    let containerResults = try contactStore.unifiedContacts(matching: fetchPredicate, keysToFetch: keysToFetch as! [CNKeyDescriptor])
+                    let containerResults = try contactStore.unifiedContacts(matching: fetchPredicate, keysToFetch: keysToFetch)
                     results.append(contentsOf: containerResults)
                 } catch {
                     print("Error fetching containers")

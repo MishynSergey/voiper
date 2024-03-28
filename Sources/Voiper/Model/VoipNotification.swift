@@ -97,14 +97,13 @@ extension VoipNotification: PKPushRegistryDelegate {
                 pendingNotification = payload.dictionaryPayload
             }
             
-            let twi_from = (payload.dictionaryPayload["twi_from"] as? String) ?? "Connecting.."
-           
             let set = CharacterSet(charactersIn: "+1234567890")
-            let cleanHandle = twi_from.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: "(", with: "")
-            .replacingOccurrences(of: ")", with: "")
-            .trimmingCharacters(in: set.inverted)
+            let twi_from = ((payload.dictionaryPayload["twi_from"] as? String) ?? "Connecting..")
+                .replacingOccurrences(of: " ", with: "")
+                .replacingOccurrences(of: "-", with: "")
+                .replacingOccurrences(of: "(", with: "")
+                .replacingOccurrences(of: ")", with: "")
+                .trimmingCharacters(in: set.inverted)
             
             CallMagic.update = CXCallUpdate()
             CallMagic.update?.remoteHandle = CXHandle(type: .generic, value: twi_from)

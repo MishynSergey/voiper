@@ -9,7 +9,7 @@ public class AccountManager: Observable1, OnNotification {
     public var handler: NotificationHandler = NotificationHandler()
     public var observerTokenGenerator: Int = 0
     public var observers: [Int : (AccountManager.Event) -> Void] = [:]
-    public var initialEvent: AccountManager.Event? = .none
+    public var initialEvent: AccountManager.Event? = AccountManager.Event.none
     public var wasFirstLoad: Bool {
         set {
             UserDefaults.standard.set(true, forKey: "firstLoad")
@@ -175,7 +175,7 @@ public class AccountManager: Observable1, OnNotification {
             guard let token = Settings.userToken else {
             
                 let realm = try! Realm()
-                try! realm.writeAsync {
+                realm.writeAsync {
                     realm.deleteAll()
                 }
                 
@@ -292,7 +292,7 @@ public class AccountManager: Observable1, OnNotification {
                     }
             }
         }.then { response -> Promise<Void> in
-            if let subscription = response.subscriptions.first(where: { product.type.id == $0.productId && $0.expiredAt == nil && $0.accountNumberId == nil }) {
+            if let subscription = response.subscriptions.first(where: { product.skProduct.productIdentifier == $0.productId && $0.expiredAt == nil && $0.accountNumberId == nil }) {
                 return self.addLocalNumber(number, subscriptionId: subscription.id)
             } else {
                 return Promise(error: ServiceError.purchaseError("Wrong subscription, please try again later!"))

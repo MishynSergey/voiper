@@ -102,7 +102,7 @@ extension API {
         case .renewNumber(let id):                                          return "account/numbers/\(id)/renew"
         case .getNumberRestorationPeriod(let id):                           return "account/numbers/\(id)/expired"
         case .numberRepurchase(let id):                                     return "account/numbers/\(id)/repurchase"
-        case .getTransactions(let numberId, let last_id):                   return "account/numbers/\(numberId)/transactions"
+        case .getTransactions(let numberId, _):                             return "account/numbers/\(numberId)/transactions"
         case .getActivities(let numberId):                                  return "account/numbers/\(numberId)/activity"
         case .getChatActivities(let numberId, let participant, _, _):       return "account/numbers/\(numberId)/activity/\(participant)"
         case .getChatActivitiesCount(let numberId, let participant, _):     return "account/numbers/\(numberId)/activity/\(participant)/count"

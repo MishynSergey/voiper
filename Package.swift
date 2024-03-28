@@ -16,7 +16,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.6.1"),
-        .package(url: "https://github.com/Alamofire/AlamofireImage.git", from: "4.2.0"),
         .package(url: "https://github.com/mxcl/PromiseKit.git", from: "6.22.1"),
         .package(url: "https://github.com/realm/realm-swift", from: "10.24.1"),
         .package(url: "https://github.com/MessageKit/MessageKit.git", from: "3.8.0"),

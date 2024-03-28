@@ -22,6 +22,8 @@ public class PushNotification {
                 case .ephemeral:
                     //TODO SASHA
                     assertionFailure("dont implementd")
+                @unknown default:
+                    assertionFailure("unknown status")
                 }
             })
         }
