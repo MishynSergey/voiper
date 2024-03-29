@@ -171,7 +171,12 @@ extension SPCall: CallDelegate {
   
     public func callDidConnect(call twilioCall: Call) {
         print("callDidConnect:")
-        state = isOutgoing ? .connecting : .connected
+        if isOutgoing {
+            state = .connecting
+        } else {
+            state = .connected
+            connectDate = Date()
+        }
         callConnectBlock?()
     }
 }
