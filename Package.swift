@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/MessageKit/MessageKit.git", from: "3.8.0"),
         .package(url: "https://github.com/twilio/twilio-voice-ios", from: "6.3.1"),
         .package(url: "https://github.com/kishikawakatsumi/KeychainAccess.git", from: "3.0.0"),
-        .package(url: "https://github.com/facebook/facebook-ios-sdk", from: "15.0.0"),
+        .package(url: "https://github.com/facebook/facebook-ios-sdk", from: "17.0.0"),
         .package(url: "https://github.com/Amplitude/Amplitude-iOS.git", from: "8.15.0"),
         .package(url: "https://github.com/yandexmobile/metrica-sdk-ios", from: "4.5.0"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "10.15.0"),
