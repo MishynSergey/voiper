@@ -254,8 +254,6 @@ public class AccountManager: Observable1, OnNotification {
     
     func updateCallFlow() {
         if let activePhone = self.phoneManager.activePhoneModel
-//            ,
-//            (Settings.isRestoringPeriod || activePhone.phoneNumber.isActive)
         {
                 AccountManager.callFlow.callManager = activePhone.callManager
                 activePhone.callManager.voipNotification = self.voipNotification
