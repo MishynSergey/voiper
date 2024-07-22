@@ -94,14 +94,14 @@ public class PurchaseManager: NSObject {
         SKPaymentQueue.default().add(SKPayment(product: product.skProduct))
     }
     
-    public func fetchProducts(_ productTypes: Set<TheProduct.ProductType>, completion: Completion? = nil) {
-        let prefetchedProducts = products.compactMap { productTypes.contains($0.type) ? $0 : nil }
+    public func fetchProducts(_ productTypes: Set<String>, completion: Completion? = nil) {
+        let prefetchedProducts = products.compactMap { productTypes.contains($0.skProduct.productIdentifier) ? $0 : nil }
         if prefetchedProducts.count == productTypes.count {
             DispatchQueue.main.async {
-                completion?(.success(Set(prefetchedProducts.compactMap { $0.type.id } )))
+                completion?(.success(Set(prefetchedProducts.compactMap { $0.skProduct.productIdentifier } )))
             }
         } else {
-            let request = ProductsRequest(productIdentifiers: Set(productTypes.compactMap { $0.id } ))
+            let request = ProductsRequest(productIdentifiers: Set(productTypes))
             request.id = "\(Date.timeIntervalSinceReferenceDate)"
             fetchingCompletions[request.id] = completion
             request.delegate = self

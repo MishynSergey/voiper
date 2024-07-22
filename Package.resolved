@@ -19,15 +19,6 @@
       }
     },
     {
-      "identity" : "alamofireimage",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Alamofire/AlamofireImage.git",
-      "state" : {
-        "revision" : "1eaf3b6c6882bed10f6e7b119665599dd2329aa1",
-        "version" : "4.3.0"
-      }
-    },
-    {
       "identity" : "amplitude-ios",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Amplitude/Amplitude-iOS.git",
@@ -59,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/facebook/facebook-ios-sdk",
       "state" : {
-        "revision" : "7fd8a930a5b2c940a22efafe0e214ed0df671312",
-        "version" : "15.1.0"
+        "revision" : "09eb5b0cb74127a360e0bc74a2d75ec1fd351e48",
+        "version" : "17.0.0"
       }
     },
     {

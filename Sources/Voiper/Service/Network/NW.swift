@@ -96,7 +96,6 @@ public class NW {
             }
             return Promise.value(account)
         }.done { result in
-            let realm = try! Realm()
             NotificationCenter.default.post(name: Account.updateNotification, object: nil)
             completion(.success(result))
         }.catch { error in
@@ -133,7 +132,7 @@ public class NW {
             }
             let keychain = Keychain(service: Settings.Key.keychainName)
             do {
-                try! keychain.synchronizable(true).removeAll()
+                try keychain.synchronizable(true).removeAll()
             } catch {
                 print(error)
             }
@@ -238,7 +237,7 @@ public class NW {
     
     public func registerPush( deviceID: String, token: String, completion: (() -> Void)? = nil) {
         let promise: Promise<EmptyResponse> = service.execute(.registerPush(deviceID, token))
-        promise.done { _ in
+        _ = promise.done { _ in
             completion?()
         }
     }

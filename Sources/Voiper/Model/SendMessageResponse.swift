@@ -10,6 +10,6 @@ public struct SendMessageResponse: Decodable {
 
 extension SendMessageResponse: CustomStringConvertible {
     public var description: String {
-        return jsonFormatDescription((name: "activity", value: activity?.description ?? "Unknown, cancel_id \(cancel_id)"))
+        return jsonFormatDescription((name: "activity", value: activity?.description ?? "Unknown"))
     }
 }

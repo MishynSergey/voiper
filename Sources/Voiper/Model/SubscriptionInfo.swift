@@ -43,8 +43,6 @@ extension SubscriptionInfo {
                   accountNumberId: realmObject.accountNumberId,
                   subscriptionGroup: realmObject.subscriptionGroup)
         self.accountNumberId = realmObject.accountNumberId == -1 ? nil : realmObject.accountNumberId
-        guard realmObject.subscriptionGroup == -1, let subscription = TheProduct.ProductType.allCases.first(where: { $0.id == realmObject.productId }) else { return }
-        self.subscriptionGroup = subscription.group
     }
 }
 
