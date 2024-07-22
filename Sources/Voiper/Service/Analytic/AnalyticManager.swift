@@ -2,7 +2,7 @@
 import Foundation
 import FacebookCore
 import Amplitude
-import YandexMobileMetrica
+import AppMetricaCore
 
 public class AnalyticManager {
     
@@ -49,8 +49,8 @@ public class AnalyticManager {
         }
         
         if let yandexToken  = yandexToken {
-            if let config = YMMYandexMetricaConfiguration(apiKey: yandexToken) {
-                YMMYandexMetrica.activate(with: config)
+            if let config = AppMetricaConfiguration(apiKey: yandexToken) {
+                AppMetrica.activate(with: config)
             }
         }
     }
@@ -69,9 +69,7 @@ public class AnalyticManager {
         }
         
         if yandexToken != nil {
-            YMMYandexMetrica.reportEvent(eventName, parameters: attributes, onFailure: nil)
+            AppMetrica.reportEvent(name: eventName, parameters: attributes, onFailure: nil)
         }
-        
-        
     }
 }

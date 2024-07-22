@@ -24,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/facebook/facebook-ios-sdk", from: "17.0.0"),
         .package(url: "https://github.com/Amplitude/Amplitude-iOS.git", from: "8.15.0"),
         .package(url: "https://github.com/appmetrica/appmetrica-sdk-ios.git", from: "5.6.0"),
-        .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "10.15.0"),
+        .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "10.24.0"),
     ],
     
     targets: [
