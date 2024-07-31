@@ -24,6 +24,9 @@ public class Settings {
         public static let lastVisitDateKey =  "\(bundle).lastVisit.key"
     }
     
+    
+    
+    
     public static var deviceId: String {
         if let deviceId = UserDefaults.standard.string(forKey: Key.deviceId) {
             return deviceId
@@ -98,6 +101,25 @@ public class Settings {
             return false
         }
     }
+    
+    @UserDefault(key: "isDoNotDisturb", defaultValue: false)
+    public static var isDoNotDisturb: Bool?
+
+    @UserDefault(key: "isCheckPin", defaultValue: false)
+    public static var isCheckPin: Bool?
+    
+    @UserDefault(key: "isFastReply", defaultValue: false)
+    public static var isFastReply: Bool?
+    
+    @UserDefault(key: "PinCode", defaultValue: "")
+    public static var pinCode: String?
+    
+    @UserDefault(key: "fromDate", defaultValue: nil)
+    public static var fromDate: Date?
+    
+    @UserDefault(key: "toDate", defaultValue: nil)
+    public static var toDate: Date?
+
 }
 
 public class Storage {
@@ -129,3 +151,24 @@ public class Storage {
         }
     }
 }
+
+
+@propertyWrapper
+public struct UserDefault<T> {
+    let key: String
+    let defaultValue: T?
+
+    public var wrappedValue: T? {
+        get {
+            return UserDefaults.standard.object(forKey: key) as? T ?? defaultValue
+        }
+        set {
+            if let value = newValue {
+                UserDefaults.standard.set(value, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+    }
+}
+

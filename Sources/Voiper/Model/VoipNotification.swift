@@ -27,6 +27,8 @@ public class VoipNotification: NSObject, Observable1 {
         super.init()
 
         voipRegistry.desiredPushTypes = [.voIP]
+        fromDate = Settings.fromDate
+        toDate = Settings.toDate
         
         DispatchQueue.main.async {
             self.voipRegistry.delegate = self
