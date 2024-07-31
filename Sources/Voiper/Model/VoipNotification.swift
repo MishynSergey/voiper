@@ -4,7 +4,6 @@ import CallKit
 import TwilioVoice
 
 public class VoipNotification: NSObject, Observable1 {
-    
     private var deviceToken: Data?
     private var voipRegistry: PKPushRegistry
     
@@ -19,6 +18,9 @@ public class VoipNotification: NSObject, Observable1 {
     
     private var pendingNotification: [AnyHashable: Any]?
     
+    public var fromDate: Date?
+    public var toDate: Date?
+
     override init() {
         voipRegistry = PKPushRegistry(queue: .main)
         
@@ -56,13 +58,11 @@ extension VoipNotification: PKPushRegistryDelegate {
         } else {
             print("initialEvent is nil")
         }
-       
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
-        guard type == .voIP,
-            let deviceToken = deviceToken else {
-                return
+        guard type == .voIP, let deviceToken = deviceToken else {
+            return
         }
         
         print("VOIP TOKEN REMOVED: \(deviceToken)")
@@ -70,16 +70,17 @@ extension VoipNotification: PKPushRegistryDelegate {
         notifyObservers(initialEvent!)
     }
     
-   
-    
     public func pushRegistry(_ registry: PKPushRegistry,
                              didReceiveIncomingPushWith payload: PKPushPayload,
                              for type: PKPushType,
-                             completion: @escaping () -> Void
-    ) {
-        print("VOIP PUSH RECIEVED")
-                
+                             completion: @escaping () -> Void) {
+        print("VOIP PUSH RECEIVED")
         guard type == .voIP else { return }
+        let currentDate = Date()
+        if let from = fromDate, let to = toDate, checkCurrentTime(fromTime: from, toTime: to) {
+            print("VOIP PUSH BLOCKED")
+            return
+        }
 
         if CallMagic.provider == nil {
             CallMagic.provider = CallProvider()
@@ -114,9 +115,9 @@ extension VoipNotification: PKPushRegistryDelegate {
             CallMagic.update?.hasVideo = false
             CallMagic.update?.localizedCallerName = twi_from
                
-            if let uid = CallMagic.UID , let provider = CallMagic.provider, let update = CallMagic.update {
+            if let uid = CallMagic.UID, let provider = CallMagic.provider, let update = CallMagic.update {
                 CallMagic.update = nil
-                provider.reportIncomingCall(from: uid , with: update) { _ in
+                provider.reportIncomingCall(from: uid, with: update) { _ in
                     print("Incoming first reportIncomingCall ok")
                     completion()
                 }
@@ -126,7 +127,7 @@ extension VoipNotification: PKPushRegistryDelegate {
                     ||
                     payload.dictionaryPayload["twi_message_type"] as? String == "twilio.voice.end" {
             
-            if let uid = CallMagic.UID , let provider = CallMagic.provider {
+            if let uid = CallMagic.UID, let provider = CallMagic.provider {
                 
                 if let handler = notificationHandler {
                     handler.handleVoipNotification(payload.dictionaryPayload)
@@ -140,3 +141,28 @@ extension VoipNotification: PKPushRegistryDelegate {
         }
     }
 }
+
+fileprivate func checkCurrentTime(fromTime: Date, toTime: Date) -> Bool {
+    let currentTime = Date()
+    let calendar = Calendar.current
+    let fromComponents = calendar.dateComponents([.hour, .minute], from: fromTime)
+    let toComponents = calendar.dateComponents([.hour, .minute], from: toTime)
+    let currentComponents = calendar.dateComponents([.hour, .minute], from: currentTime)
+    let fromDate = calendar.date(from: fromComponents)!
+    let toDate = calendar.date(from: toComponents)!
+    let currentDate = calendar.date(from: currentComponents)!
+    if fromDate <= toDate {
+        if fromDate <= currentDate && currentDate <= toDate {
+            return true
+        } else {
+            return false
+        }
+    } else {
+        if currentDate >= fromDate || currentDate <= toDate {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
